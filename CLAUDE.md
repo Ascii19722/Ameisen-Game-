@@ -66,7 +66,13 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   * Je größer die Kolonie, desto öfter neue Abzweige (aber nur wo vorne Platz ist, mit Abstand zu anderen Abzweigen).
   * Am Gangende manchmal eine Kammer; Seitenkammern über kurzen Stummel – nur wo genug Platz ist
     (Mindestabstand zu anderen Kammern und Gängen).
-  Vorschau: Bogen „Selbst gegraben nach Bauplan-Regeln“ (Nest A/B im Zeitraffer).
+  * KEIN Röntgenblick: Steine (und Weltrand) bemerkt eine Ameise erst, wenn sie beim Graben dagegen stößt.
+    Dann tastet sie sich am Stein entlang zur Seite (merkt sich die Seite); kommt sie lange nicht vorbei,
+    endet der Gang dort. Kammern werden um Steine herum gegraben (Stein bleibt stehen).
+  * Eigene Gänge kennen die Ameisen (sie laufen darin herum, Ortssinn) – Abstand zu bekannten Gängen
+    halten ist erlaubt, Wissen über Unbekanntes im Boden nicht.
+  * Manche neuen Gänge suchen die Tiefe; gibt ein Gang auf, versucht es später eine andere Ameise woanders.
+  Vorschau: Bogen „Ohne Röntgenblick“ (Nest A/B im Zeitraffer).
   Später ggf. ergänzen: Kammern dort, wo Brut abgelegt wird (echte Ameisen).
 - Kammern NICHT dicht aneinander: wie im ants.sim-Video klein und rund (ca. 3–4× Gangbreite),
   zwischen zwei Kammern mindestens eine Kammerbreite Sand (Mindestabstand), Kammern am Ende von

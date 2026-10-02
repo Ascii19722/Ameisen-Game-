@@ -71,6 +71,8 @@ function createAnt(x, y, caste) {
     load: null,             // trägt Futter oder Brut
     job: null,              // Aufgabe für die Kolonie (siehe colony.js)
     walk: Math.random() * 8,
+    hp: ANT_HP[caste], maxHp: ANT_HP[caste],
+    foe: null, dead: false,
   };
 }
 
@@ -116,6 +118,8 @@ function decide(a) {
   if (a.job) { dropLoad(a); endJob(a); }
   if (a.caste === 'queen') { queenDecide(a); return; }
   if (a.caste === 'soldier') { soldierDecide(a); return; }
+  // Feind im Nest in der Nähe? Arbeiterinnen helfen bei der Verteidigung.
+  if (a.caste === 'worker' && enemies.length && Math.random() < 0.5 && attackEnemy(a, 25)) return;
   if (a.caste === 'nurse') {   // Pflegerin: bei der Brut bleiben, selten graben
     if (colonyTask(a)) return;
     if (Math.random() < 0.8) {
@@ -141,17 +145,20 @@ function decide(a) {
   wander(a, 600);
 }
 
+const inRoyal = a => world.royal && Math.abs(a.x - world.royal.cx) < 12 && Math.abs(a.y - world.royal.floor) < 6;
+
 // Die Königin zieht in ihre Kammer, sobald es eine gibt, und bleibt dort
 function queenDecide(a) {
   const r = world.royal;
   if (r) {
-    const inRoom = Math.abs(a.x - r.cx) < 9 && Math.abs(a.y - r.floor) < 4;
-    if (!inRoom) {
+    if (!inRoyal(a)) {
+      // möglichst nah an die Kammermitte, aber jede Stelle in der Kammer ist recht
       const goal = bfs(idx(a.x, a.y), i => {
         const x = i % W, y = (i / W) | 0;
-        return Math.abs(x - r.cx) < 4 && y === r.floor;
+        return Math.abs(x - r.cx) < 6 && Math.abs(y - r.floor) <= 4;
       }, N);
-      if (setPath(a, goal)) { a.state = 'toRoyal'; return; }
+      if (setPath(a, goal)) { a.state = 'toRoyal'; a.lost = false; return; }
+      a.lost = isUnderground(a.x, a.y);   // kein Weg hinein: dann eben hier im Nest bleiben
     } else {
       // Meist ruhig in der Kammer liegen, ab und zu ein paar Schritte
       if (Math.random() < 0.7) { a.state = 'rest'; a.timer = rand(3, 8); return; }
@@ -166,6 +173,7 @@ function queenDecide(a) {
 // Soldatin: bewacht den Eingang, läuft oben und im oberen Gang Streife
 function soldierDecide(a) {
   const ex = world.entranceX;
+  if (enemies.length && attackEnemy(a, 200)) return;   // Alarm: zum Feind laufen
   if (Math.random() < 0.6 && colonyTask(a)) return;   // schwere Beute mittragen
   if (Math.random() < 0.5) {
     const tx = ex + randInt(-25, 25), top = columnTop(tx);
@@ -315,6 +323,7 @@ function updateAnt(a, dt) {
     return;
   }
   orient(a, dt);
+  if (antCombat(a, dt)) return;
   if (a.state === 'haul') return;   // trägt mit anderen eine Beute (Bewegung in colony.js)
 
   if (a.timer > 0) {
@@ -324,11 +333,17 @@ function updateAnt(a, dt) {
     return;
   }
   if (!a.path) { arrive(a); return; }
+  const r = moveAlong(a, dt);
+  if (r === 'blocked') replan(a);
+  else if (r === 'arrived') arrive(a);
+}
 
+// Ein Stück den Weg entlanglaufen. Liefert 'blocked' (Weg verschüttet), 'arrived' oder 'moving'.
+function moveAlong(a, dt) {
   let step = a.speed * dt;
-  while (step > 0 && a.path && a.pi < a.path.length) {
+  while (step > 0 && a.pi < a.path.length) {
     const next = a.path[a.pi];
-    if (world.cells[next] !== AIR) { replan(a); return; }
+    if (world.cells[next] !== AIR) return 'blocked';
     a.mx = next % W - a.x;
     a.my = ((next / W) | 0) - a.y;
     const need = 1 - a.t;
@@ -345,9 +360,15 @@ function updateAnt(a, dt) {
       step = 0;
     }
   }
-  if (a.path && a.pi >= a.path.length) arrive(a);
+  return a.pi >= a.path.length ? 'arrived' : 'moving';
 }
 
 function updateAnts(dt) {
-  for (const a of ants) updateAnt(a, dt);
+  for (const a of ants) if (!a.dead) updateAnt(a, dt);
+  // Gestorbene Ameisen aus der Liste nehmen
+  if (ants.some(a => a.dead)) {
+    let k = 0;
+    for (const a of ants) if (!a.dead) ants[k++] = a;
+    ants.length = k;
+  }
 }

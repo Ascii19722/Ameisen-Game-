@@ -161,7 +161,7 @@ function antWorldPos(a) {
 }
 
 function itemImage(it, now) {
-  const frames = itemSprites[it.kind];
+  const frames = itemSprites[it.kind === 'corpse' ? 'corpse_' + it.caste : it.kind];
   return frames.length > 1 ? frames[Math.floor(now / 160 + it.ph) % frames.length] : frames[0];
 }
 // Larven wachsen beim Füttern
@@ -192,9 +192,12 @@ function drawAnts(g, cam, cw, ch) {
   const now = performance.now();
   g.imageSmoothingEnabled = false;
   drawItems(g, cam, cw, ch, now);
-  for (const a of ants) {
+  for (const e of enemies) if (e.type === 'spider') drawSpider(g, e, cam, cw, ch, now);
+  for (const a of ants.concat(enemies.filter(e => e.type === 'raider'))) {
     const [wx, wy] = antWorldPos(a);
-    const sx = (wx - cam.x) * s + cw / 2, sy = (wy - cam.y) * s + ch / 2;
+    // Im Kampf zappeln sie hin und her
+    const jit = a.foe ? Math.sin(now / 25 + a.walk) * 0.3 : 0;
+    const sx = (wx + jit - cam.x) * s + cw / 2, sy = (wy - cam.y) * s + ch / 2;
     if (sx < -60 || sy < -60 || sx > cw + 60 || sy > ch + 60) continue;
     const frame = Math.floor(a.walk) % WALK_FRAMES;
     const img = antSprites[a.caste][a.carry ? 1 : 0][frame];
@@ -206,11 +209,24 @@ function drawAnts(g, cam, cw, ch) {
     g.scale(a.face * squash, 1);
     g.drawImage(img, -SPRITE_SIZE * k / 2, -SPRITE_GROUND * k, SPRITE_SIZE * k, SPRITE_SIZE * k);
     if (a.load) {   // Futter oder Brut zwischen den Kiefern
-      const u = SPRITE_RES * CASTES[a.caste].size * k, sc = 0.85 * itemScale(a.load), size = ITEM_SPR * k * sc;
-      g.drawImage(itemImage(a.load, now), 1.75 * u - size / 2, -0.8 * u - size / 2, size, size);
+      const li = itemImage(a.load, now), u = SPRITE_RES * CASTES[a.caste].size * k, sc = 0.85 * itemScale(a.load), size = li.width * k * sc;
+      g.drawImage(li, 1.75 * u - size / 2, -0.8 * u - size / 2, size, size);
     }
     g.restore();
   }
+}
+
+function drawSpider(g, e, cam, cw, ch, now) {
+  const s = cam.zoom, k = s / SPRITE_RES;
+  const jit = e.foe ? Math.sin(now / 30) * 0.3 : 0;
+  const sx = (e.x + 0.5 + jit - cam.x) * s + cw / 2, sy = (e.y + 1 - cam.y) * s + ch / 2;
+  if (sx < -200 || sy < -200 || sx > cw + 200 || sy > ch + 200) return;
+  const img = spiderSprites[Math.floor(e.walk) % spiderSprites.length];
+  g.save();
+  g.translate(sx, sy);
+  g.scale(e.face, 1);
+  g.drawImage(img, -img.width * k / 2, -SPIDER_GROUND * k, img.width * k, img.height * k);
+  g.restore();
 }
 
 // ---------- Bildschirm ----------

@@ -29,6 +29,9 @@ const CASTES = {
   soldier: { size: 1.75, body: C.grey, shine: C.greyShine, leg: C.greyLeg, far: C.greyFar,
     gW: 0.95, gL: 1, thW: 0.95, headW: 1.6, headL: 1.4, legLen: 0.95, eye: 0.9,
     headSquare: true, saber: 1.3, nodes: 2 },
+  // Räuber: fremde rote Ameise (Feind)
+  raider: { size: 1.5, body: [150, 62, 36], shine: [206, 110, 70], leg: [110, 44, 26], far: [170, 96, 64],
+    gW: 0.9, gL: 1, thW: 0.9, headW: 1, headL: 1, legLen: 1.1, eye: 0.9 },
   // Pflegerin P7: grau, klein
   nurse: { size: 1.05, body: C.grey, shine: C.greyShine, leg: C.greyLeg, far: C.greyFar,
     gW: 0.9, gL: 1, thW: 0.9, headW: 0.95, headL: 1, legLen: 1.05, eye: 0.8 },
@@ -215,7 +218,7 @@ const BC = {
   hopper: [110, 150, 60], hopperD: [74, 110, 40], hopperL: [168, 198, 100],
 };
 // Halbe Höhe in Einheiten: damit liegt das Ding mit der Unterseite auf dem Boden
-const ITEM_HALF = { egg: 0.3, larva: 0.42, cocoon: 0.62, leaf: 0.3, petal: 0.28, seed: 0.28, meat: 0.3, crumb: 0.22, shell: 0.45, beetle: 0.72 * PREY_SCALE, grasshopper: 0.52 * PREY_SCALE };
+const ITEM_HALF = { egg: 0.3, larva: 0.42, cocoon: 0.62, leaf: 0.3, petal: 0.28, seed: 0.28, meat: 0.3, crumb: 0.22, shell: 0.45, corpse: 0.45, beetle: 0.72 * PREY_SCALE, grasshopper: 0.52 * PREY_SCALE };
 
 function drawLarva(g, ph) {   // Stil L4: gelblich, Ringe, kleiner Kopf, windet sich
   const n = 7, bend = 0.35 + Math.sin(ph) * 0.35, head = Math.sin(ph * 1.7) * 0.3, k = 1.1, segL = 1.1 * 2 * k / n;
@@ -310,7 +313,7 @@ function drawHopper(g) {
 const itemSprites = {};   // itemSprites[kind][frame]
 function buildItemSprites() {
   const palette = [...Object.values(BC), C.eye];
-  const make = (fn, size = ITEM_SPR) => {
+  const make = (fn, size = ITEM_SPR, pal = palette) => {
     const cv = document.createElement('canvas');
     cv.width = size;
     cv.height = size;
@@ -322,8 +325,8 @@ function buildItemSprites() {
     const img = g.getImageData(0, 0, size, size), d = img.data;
     for (let i = 0; i < d.length; i += 4) {
       if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
-      let best = palette[0], bd = Infinity;
-      for (const c of palette) {
+      let best = pal[0], bd = Infinity;
+      for (const c of pal) {
         const e = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2;
         if (e < bd) { bd = e; best = c; }
       }
@@ -336,7 +339,67 @@ function buildItemSprites() {
   // Beute ist viel größer als eine Ameise
   itemSprites.beetle = [make(g => { g.scale(PREY_SCALE, PREY_SCALE); drawBeetle(g); }, 96)];
   itemSprites.grasshopper = [make(g => { g.scale(PREY_SCALE, PREY_SCALE); drawHopper(g); }, 96)];
+  // Tote Ameisen: auf dem Rücken, Beine nach oben
+  for (const c of ['worker', 'nurse', 'soldier', 'raider']) {
+    const p = CASTES[c], f = p.size / 1.4;
+    itemSprites['corpse_' + c] = [make(g => { g.scale(f, -f); g.translate(0, -0.25); drawSideAnt(g, 0, p, false); }, 64,
+      [p.body, p.shine, p.leg, p.far, C.eye])];
+  }
   itemSprites.larva = [];
   for (let f = 0; f < 6; f++) itemSprites.larva.push(make(g => drawLarva(g, f / 6 * Math.PI * 2)));
 }
 buildItemSprites();
+
+// ---------- Spinne (Feind) von der Seite, 8 Beine, Laufbilder ----------
+const SPIDER_W = 128, SPIDER_H = 96, SPIDER_GROUND = 72, SPIDER_SCALE = SPRITE_RES * 1.4 * 2.6;
+const SP = { body: [52, 40, 34], dark: [30, 22, 18], light: [128, 102, 78], far: [86, 70, 58], eye: [200, 60, 40] };
+function drawSpiderPose(g, ph) {
+  const legs = far => {
+    g.strokeStyle = rgbCss(far ? SP.far : SP.dark);
+    g.lineWidth = 0.13;
+    g.lineCap = 'round';
+    [[2.0, 0.55], [1.1, 0.4], [-0.2, 0.25], [-1.4, 0.1]].forEach(([fx, hx], i) => {
+      const f = ph + ((i + (far ? 1 : 0)) % 2) * Math.PI;
+      const sw = Math.sin(f) * 0.35, up = Math.cos(f) > 0 ? Math.cos(f) * 0.3 : 0;
+      const footX = fx + sw + (far ? -0.2 : 0), footY = -up;
+      const kneeX = (hx + footX) / 2 + (fx > 0 ? 0.3 : -0.3), kneeY = -2.4 - up * 0.5;
+      sLine(g, [hx, -1.3, kneeX, kneeY, footX, footY]);
+    });
+  };
+  legs(true);
+  g.fillStyle = rgbCss(SP.body);
+  sPoly(g, sEll(-1.1, -1.55, 1.15, 0.85, -0.15, 18));   // Hinterleib
+  sPoly(g, sEll(0.55, -1.35, 0.7, 0.5, 0, 14));         // Kopfbrust
+  g.fillStyle = rgbCss(SP.light);                       // Zeichnung auf dem Hinterleib
+  for (const x of [-1.7, -1.2, -0.7]) sPoly(g, [x - 0.15, -2.15, x + 0.15, -2.15, x, -1.85]);
+  sPoly(g, sEll(0.5, -1.7, 0.35, 0.08, 0, 8));
+  g.fillStyle = rgbCss(SP.dark);                        // Kieferklauen und Taster
+  sPoly(g, [1.15, -1.3, 1.45, -1.1, 1.3, -0.85, 1.1, -1.05]);
+  g.fillStyle = rgbCss(SP.eye);
+  sPoly(g, sEll(1.05, -1.6, 0.09, 0.09, 0, 6));
+  sPoly(g, sEll(0.85, -1.72, 0.07, 0.07, 0, 6));
+  legs(false);
+}
+const spiderSprites = [];
+(function buildSpider() {
+  const pal = Object.values(SP);
+  for (let f = 0; f < 8; f++) {
+    const cv = document.createElement('canvas');
+    cv.width = SPIDER_W;
+    cv.height = SPIDER_H;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.translate(SPIDER_W / 2, SPIDER_GROUND);
+    g.scale(SPIDER_SCALE, SPIDER_SCALE);
+    drawSpiderPose(g, f / 8 * Math.PI * 2);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const img = g.getImageData(0, 0, SPIDER_W, SPIDER_H), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
+      let best = pal[0], bd = Infinity;
+      for (const c of pal) { const e = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2; if (e < bd) { bd = e; best = c; } }
+      d[i] = best[0]; d[i + 1] = best[1]; d[i + 2] = best[2]; d[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    spiderSprites.push(cv);
+  }
+})();

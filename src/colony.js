@@ -14,8 +14,8 @@ const LAY_GAP = 25;           // so oft legt sie ein Ei, wenn sie satt ist
 const MAX_ANTS = 1000;
 
 // Platz am Kammerboden in Welt-Pixeln: Abstand nebeneinander und Höhe beim Stapeln
-const ITEM_W = { egg: 2, larva: 4, cocoon: 4, leaf: 2, petal: 2, seed: 2, meat: 2, crumb: 2, shell: 3 };
-const ITEM_H = { egg: 0.8, larva: 0.9, cocoon: 1.6, leaf: 0.7, petal: 0.7, seed: 0.7, meat: 0.8, crumb: 0.6, shell: 0.9 };
+const ITEM_W = { egg: 2, larva: 4, cocoon: 4, leaf: 2, petal: 2, seed: 2, meat: 2, crumb: 2, shell: 3, corpse: 4 };
+const ITEM_H = { egg: 0.8, larva: 0.9, cocoon: 1.6, leaf: 0.7, petal: 0.7, seed: 0.7, meat: 0.8, crumb: 0.6, shell: 0.9, corpse: 1 };
 
 // Tote Insekten an der Oberfläche: zu schwer für eine Ameise, mehrere tragen sie gemeinsam zum Eingang
 const PREY = {
@@ -68,6 +68,7 @@ function resetColony() {
   colony.preyTimer = 60;
   colony.dumpX = Math.round(world.entranceX + (Math.random() < 0.5 ? -1 : 1) * rand(60, 90));
   for (let k = 0; k < 5; k++) addSource();
+  resetEnemies();
 }
 
 function addSource() {
@@ -92,7 +93,8 @@ function assignRole(ch) {
   ch.role = n < ROLE_ORDER.length ? ROLE_ORDER[n] : ['food', 'larvae', 'pupae', 'reserve'][n % 4];
 }
 
-const isWaste = item => item.kind === 'crumb' || item.kind === 'shell';
+// Tote eigene Ameisen sind Abfall, tote Räuber dagegen Futter
+const isWaste = item => item.kind === 'crumb' || item.kind === 'shell' || (item.kind === 'corpse' && item.caste !== 'raider');
 const roleOf = item => item.kind === 'egg' ? 'eggs' : item.kind === 'larva' ? 'larvae' : item.kind === 'cocoon' ? 'pupae' : isWaste(item) ? 'waste' : 'food';
 const listOf = item => (item.kind === 'egg' || item.kind === 'larva' || item.kind === 'cocoon') ? colony.brood : isWaste(item) ? colony.waste : colony.food;
 
@@ -221,14 +223,15 @@ function removeItem(item) {
 
 function foodCount() { return colony.food.filter(f => !f.by).length; }
 function foodTarget() { return 8 + Math.round(ants.length * 0.25) + colony.brood.filter(b => b.kind === 'larva').length; }
+// Zufällig eins aus allen passenden Dingen wählen. (Immer das erste zu nehmen wäre schlecht:
+// liegt genau das unerreichbar, würden alle Ameisen immer wieder daran scheitern.)
+function pickRandom(list, ok) {
+  let found = null, n = 0;
+  for (const it of list) if (ok(it) && Math.random() < 1 / ++n) found = it;
+  return found;
+}
 function freeFood() {
-  let loose = null;
-  for (const f of colony.food) {
-    if (f.by || f.claim) continue;
-    if (f.room) return f;
-    loose = loose || f;
-  }
-  return loose;
+  return pickRandom(colony.food, f => !f.by && !f.claim && f.room) || pickRandom(colony.food, f => !f.by && !f.claim);
 }
 function larvaHungry(l) {
   return l.kind === 'larva' && !l.by && !l.feeder && !l.claim && l.fed < LARVA_FEEDS && l.age - l.lastFed >= LARVA_FEED_GAP;
@@ -262,19 +265,19 @@ function colonyTask(a) {
   }
   // 2. Brut in die richtige Kammer tragen
   if (Math.random() < 0.7) {
-    const b = colony.brood.find(it => !it.by && !it.claim && !it.feeder && misplaced(it));
+    const b = pickRandom(colony.brood, it => !it.by && !it.claim && !it.feeder && misplaced(it));
     if (b) { const room = roomFor(roleOf(b)); if (room && startJob(a, { type: 'move', item: b, room })) return true; }
   }
   // 3. Eine hungrige Larve füttern
   if (Math.random() < 0.8) {
-    const l = colony.brood.find(larvaHungry), f = l && freeFood();
+    const l = pickRandom(colony.brood, larvaHungry), f = l && freeFood();
     if (f && startJob(a, { type: 'larva', item: f, larva: l })) return true;
   }
   if (nurse) return false;
   if (Math.random() < 0.7 && preyTask(a)) return true;
   // Abfall wegräumen
   if (Math.random() < 0.4) {
-    const w = colony.waste.find(it => !it.by && !it.claim && misplaced(it));
+    const w = pickRandom(colony.waste, it => !it.by && !it.claim && misplaced(it));
     if (w) {
       const room = roomFor('waste');
       if (startJob(a, room ? { type: 'move', item: w, room } : { type: 'move', item: w, dumpX: colony.dumpX + randInt(-3, 3) })) return true;
@@ -282,7 +285,7 @@ function colonyTask(a) {
   }
   // 4. Loses Futter in die Vorratskammer bringen
   if (Math.random() < 0.5) {
-    const f = colony.food.find(it => !it.by && !it.claim && misplaced(it));
+    const f = pickRandom(colony.food, it => !it.by && !it.claim && misplaced(it));
     if (f) { const room = roomFor('food'); if (room && startJob(a, { type: 'move', item: f, room })) return true; }
   }
   // 5. Futter holen, wenn der Vorrat knapp ist
@@ -299,7 +302,7 @@ function colonyTask(a) {
 
 // Beute: tote Insekten gemeinsam heimtragen (auch Soldatinnen helfen)
 function preyTask(a) {
-  const p = colony.prey.find(q => q.carriers.length < q.need && !q.moving);
+  const p = pickRandom(colony.prey, q => q.carriers.length < q.need && !q.moving);
   return !!p && startJob(a, { type: 'prey', prey: p });
 }
 
@@ -437,7 +440,7 @@ function updateColony(dt) {
     if (colony.eatTimer <= 0) { colony.eatTimer = QUEEN_EAT; colony.queenFood = Math.max(0, colony.queenFood - 1); }
     colony.layTimer -= dt;
     const r = world.royal;
-    const inRoom = Math.abs(queen.x - r.cx) < 12 && Math.abs(queen.y - r.floor) < 5 && !queen.path;
+    const inRoom = (inRoyal(queen) || queen.lost) && !queen.path;
     if (colony.layTimer <= 0 && inRoom) {
       colony.layTimer = LAY_GAP * rand(0.8, 1.2);
       if (colony.queenFood > 0.5 && colony.brood.length < 6 + ants.length * 0.5 && ants.length < MAX_ANTS) {
@@ -472,6 +475,22 @@ function updateColony(dt) {
     if ((w.dumped && w.age > 400) || (w.room && w.age > 1500)) { liftItem(w); colony.waste.splice(k, 1); }
   }
   updatePrey(dt);
+  // Verschüttete Dinge (z. B. unter dem Sandhügel) kommen wieder nach oben
+  colony.buryCheck = (colony.buryCheck || 0) - dt;
+  if (colony.buryCheck <= 0) {
+    colony.buryCheck = 3;
+    for (const list of [colony.food, colony.brood, colony.waste]) {
+      for (const it of list) {
+        if (it.by) continue;
+        const x = Math.round(it.x);
+        let y = Math.round(it.y);
+        if (world.cells[idx(x, y)] === AIR) continue;
+        while (y > 0 && world.cells[idx(x, y)] !== AIR) y--;
+        liftItem(it);
+        it.x = x; it.y = y; it.lvl = 0;
+      }
+    }
+  }
   // Abgeerntete Pflanzen verschwinden, neue wachsen nach
   colony.sources = colony.sources.filter(s => s.amount > 0 || ants.some(a => a.job && a.job.source === s));
   colony.sourceTimer += dt;

@@ -88,6 +88,7 @@ function step(dt) {
   updatePlan(dt);
   updateAnts(dt);
   updateColony(dt);
+  updateEnemies(dt);
   updateSky(dt);
 }
 
@@ -108,7 +109,7 @@ function drawHud() {
   const big = `${ants.length} AMEISEN · ${broodCount()} BRUT · ${foodCount()} FUTTER`;
   ctx.font = `700 ${Math.round(26 * u)}px system-ui, sans-serif`;
   const nS = ants.filter(a => a.caste === 'soldier').length, nP = ants.filter(a => a.caste === 'nurse').length;
-  const small = `KOLONIE · ${nS} SOLDATINNEN · ${nP} PFLEGERINNEN`;
+  const small = `KOLONIE · ${nS} SOLDATINNEN · ${nP} PFLEGERINNEN${enemies.length ? ' · ANGRIFF!' : ''}`;
   const clock = `Tag ${sky.day} · ${clockText()}${paused ? ' · Pause' : ''}${speed > 1 ? ' · ' + speed + '×' : ''}`;
   const bigW = ctx.measureText(big).width;
   ctx.font = `600 ${Math.round(15 * u)}px system-ui, sans-serif`;

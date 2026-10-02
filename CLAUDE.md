@@ -24,6 +24,7 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `src/sprites.js` – Ameisen-Bilder von der Seite (Laufbilder je Sorte, vorgezeichnet)
 - `src/sky.js` – Himmel, Sonne/Mond, Sterne, Wolken, Wald, Tageszeit
 - `src/render.js` – Zeichnen (Pixel-Art, ein Pixel = eine Zelle, dann hochskaliert)
+- `src/enemies.js` – Feinde (Spinne, rote Räuber-Ameisen) und Kampf
 - `src/save.js` – Speichern im Browser (localStorage), „Neue Kolonie“
 - `src/main.js` – Start, Spielschleife, Tasten, HUD
 
@@ -118,6 +119,9 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   Eingang, dort wird sie in Stücke zerlegt. Abfall (Reste, Kokonhüllen) kommt in die Abfallkammer
   (abseits) oder, solange es keine gibt, auf den Abfallhaufen draußen. Brut: tagsüber in die obere,
   nachts in die untere Larven-/Puppenkammer.
+- Feinde: Spinne (oben, frisst bis zu 3 Ameisen, zieht verletzt ab), rote Räuber (stehlen Brut).
+  Ameisen wehren sich, Soldatinnen eilen herbei. Kein Game Over: die Königin ist unverwundbar.
+  Tote eigene Ameisen = Abfall, tote Räuber = Futter. Feinde erst ab 40 Ameisen.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

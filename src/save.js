@@ -101,6 +101,7 @@ function loadGame() {
   colony.eatTimer = c.eatTimer;
   colony.layTimer = c.layTimer;
   colony.sourceTimer = 0;
+  resetEnemies();
   sky.time = data.sky.time;
   sky.day = data.sky.day;
   return true;

@@ -32,7 +32,9 @@
       <option value="waste">Abfall</option>
       <option value="reserve">leer / Reserve</option>
     </select>
+    <span>Größe</span><input id="kgroesse" type="range" min="0.6" max="2.2" step="0.1" value="1" title="Größe der nächsten Kammer">
     <button data-tool="fuellen" title="Taste 3">▒ Zuschütten</button>
+    <button data-tool="huegel" title="Taste 4">▲ Sandhügel</button>
     <span>Pinsel</span><input id="pinsel" type="range" min="1" max="5" step="0.5" value="2.2">
     <span class="trenner"></span>
     <button id="zurueck" title="Strg+Z">↶ Zurück</button>
@@ -43,7 +45,7 @@
     <button id="spielen">▶ Im Spiel ausprobieren</button>
     <button id="spiel">✕ Zurück zum Spiel</button>
   </div>
-  <div id="hilfe">Linke Maustaste: malen · Rechtsklick auf eine Kammer: Markierung entfernen · Mausrad: Zoom · Leertaste + Ziehen: verschieben</div>
+  <div id="hilfe">Gang bis zur Oberfläche graben = neuer Eingang · Linke Maustaste: malen · Rechtsklick auf eine Kammer: Markierung entfernen · Mausrad: Zoom · Leertaste + Ziehen: verschieben</div>
 
   <script src="../src/world.js"></script>
   <script src="../src/colony.js"></script>
@@ -113,10 +115,22 @@
     markDirty(Math.floor(cx - r) - 1, Math.floor(cy - r) - 1, Math.ceil(cx + r) + 1, Math.ceil(cy + r) + 1);
   }
 
+  // Sandhügel: lockerer Sand über der Oberfläche (wie der Hügel aus ausgegrabener Erde)
+  function huegel(cx, cy, r) {
+    for (let y = Math.floor(cy - r); y <= cy + r; y++) {
+      for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+        if (x < 1 || y < 10 || x >= W - 1 || y >= H || (x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+        if (y < world.surface[x] && world.cells[idx(x, y)] === AIR) world.cells[idx(x, y)] = LOOSE;
+      }
+    }
+    markDirty(Math.floor(cx - r) - 1, Math.floor(cy - r) - 1, Math.ceil(cx + r) + 1, Math.ceil(cy + r) + 1);
+  }
+
   // Kammer wie im Spiel: viele kleine, unregelmäßige Grab-Bewegungen, flacher Boden
   function kammer(cx, cy, role) {
-    const k = PLAN.chamberSize * (role === 'queen' ? 1.15 : 1), rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + ry * 0.45);
-    for (let n = 0; n < 40; n++) {
+    const f = +document.getElementById('kgroesse').value * (role === 'queen' ? PLAN.royalSize : 1);
+    const k = PLAN.chamberSize * f, rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + ry * 0.45);
+    for (let n = 0; n < Math.round(40 * f * f); n++) {
       const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
       carve(cx + Math.cos(a) * d * rx * 0.75, floor - ry * 0.9 + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k), floor);
     }
@@ -154,6 +168,7 @@
   function paint(x, y) {
     if (tool === 'gang') carve(x, y, pinsel() * (0.9 + Math.random() * 0.2));   // leicht unregelmäßig wie gegraben
     else if (tool === 'fuellen') fill(x, y, pinsel() + 0.5);
+    else if (tool === 'huegel') huegel(x, y, pinsel() + 0.5);
   }
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
@@ -174,6 +189,7 @@
     if (e.key === '1') setTool('gang');
     if (e.key === '2') setTool('kammer');
     if (e.key === '3') setTool('fuellen');
+    if (e.key === '4') setTool('huegel');
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { zurueck(); e.preventDefault(); }
   });
   addEventListener('keyup', e => { if (e.code === 'Space') space = false; });
@@ -197,6 +213,14 @@
     const q = marks.find(m => m.role === 'queen');
     if (!q) { alert('Bitte zuerst eine Königinnen-Kammer setzen (Werkzeug „Kammer“, Aufgabe „Königin“).'); return; }
     if (!confirm('Das Spiel startet mit diesem Nest. Ein gespeicherter Spielstand wird dabei ersetzt. Weiter?')) return;
+    // Eingänge: überall, wo ein Gang die Oberfläche durchbricht
+    world.entrances = [];
+    for (let x = 2; x < W - 2; x++) {
+      const open = world.cells[idx(x, SURFACE_Y)] === AIR && world.cells[idx(x, SURFACE_Y + 3)] === AIR;
+      if (open && !world.entrances.some(e => Math.abs(e - x) < 8)) world.entrances.push(x + 1);
+    }
+    if (!world.entrances.length) world.entrances = [world.entranceX];
+    world.entranceX = world.entrances.reduce((b, e) => Math.abs(e - W / 2) < Math.abs(b - W / 2) ? e : b);
     world.chambers = marks.map((m, k) => ({ cx: m.x, cy: m.y - 3, floor: Math.round(m.y), id: k, royal: m.role === 'queen', role: m.role }));
     world.royal = world.chambers.find(c => c.royal);
     world.tips = [];
@@ -234,9 +258,12 @@
       ctx.fillText(t, sx, sy + 1 * dpr);
     }
     // Eingang markieren
-    const ex = (world.entranceX + 0.5 - cam.x) * cam.zoom + canvas.width / 2, ey = (SURFACE_Y - 8 - cam.y) * cam.zoom + canvas.height / 2;
     ctx.fillStyle = 'rgba(240, 233, 220, 0.9)';
-    ctx.fillText('▼ EINGANG', ex, ey);
+    for (let x = 2; x < W - 2; x++) {
+      if (world.cells[idx(x, SURFACE_Y)] !== AIR || world.cells[idx(x - 1, SURFACE_Y)] === AIR) continue;
+      const ex = (x + 1.5 - cam.x) * cam.zoom + canvas.width / 2, ey = (SURFACE_Y - 8 - cam.y) * cam.zoom + canvas.height / 2;
+      ctx.fillText('▼ EINGANG', ex, ey);
+    }
     requestAnimationFrame(frame);
   }
 

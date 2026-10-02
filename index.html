@@ -19,6 +19,10 @@
     #tempo { position: fixed; top: 76px; right: 24px; display: flex; gap: 6px; }
     #tempo button { padding: 6px 10px; border-radius: 8px; border: 2px solid rgba(120, 100, 80, 0.35);
       background: rgba(240, 233, 220, 0.94); color: #3e3128; font: 700 14px system-ui, sans-serif; cursor: pointer; }
+    #warpBox { display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 8px;
+      border: 2px solid rgba(120, 100, 80, 0.35); background: rgba(240, 233, 220, 0.94); color: #3e3128; font: 700 14px system-ui, sans-serif; }
+    #warpBox input { width: 120px; accent-color: #b5704a; }
+    #warpBox b { min-width: 42px; text-align: right; }
     #tempo button.an { background: #b5704a; color: #fff6ea; border-color: #8a5236; }
   </style>
 </head>
@@ -33,6 +37,7 @@
     <button data-s="4" title="Taste 3">4×</button>
     <button data-s="8" title="Taste 4">8×</button>
     <button data-s="16" title="Taste 5">16×</button>
+    <span id="warpBox"><input id="warp" type="range" min="1" max="100" value="1" title="Zeitraffer bis 100×"><b id="warpText">1×</b></span>
   </div>
   <script src="src/world.js"></script>
   <script src="src/colony.js"></script>

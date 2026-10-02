@@ -14,9 +14,17 @@ let bfsCount = 0;
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DY = [0, 0, 1, -1, 1, -1, 1, -1];
 
+// Laufen geht überall, wo eine Wand höchstens 2 Pixel entfernt ist: So müssen die Ameisen nicht
+// jede kleine Nische umrunden, sondern gehen auch quer über Lücken und in der Gangmitte.
 function isWalkable(x, y) {
   if (world.cells[y * W + x] !== AIR || y < 1) return false;
   for (let k = 0; k < 8; k++) if (solidAt(x + DX[k], y + DY[k])) return true;
+  if (y < world.surface[x] - 1) return false;   // draußen nur am Boden, nicht durch die Luft
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if ((dx === 2 || dx === -2 || dy === 2 || dy === -2) && solidAt(x + dx, y + dy)) return true;
+    }
+  }
   return false;
 }
 
@@ -258,12 +266,14 @@ function wander(a, nodes) {
   }
 }
 
-// Sand nach oben tragen: meist nah am Eingang, selten weiter weg → Hügel
-function chooseDropColumn() {
-  const ex = world.entranceX;
+// Sand nach oben tragen: zum nächsten Eingang, dicht daneben ablegen → Hügel, der mit dem Nest wächst
+function chooseDropColumn(a) {
+  const list = world.entrances && world.entrances.length ? world.entrances : [world.entranceX];
+  let ex = list[0];
+  for (const e of list) if (Math.abs(e - a.x) < Math.abs(ex - a.x)) ex = e;
   for (let k = 0; k < 6; k++) {
     const side = Math.random() < 0.5 ? -1 : 1;
-    const x = Math.max(3, Math.min(W - 4, ex + side * (4 + Math.floor(Math.random() * Math.random() * 40))));
+    const x = Math.max(3, Math.min(W - 4, ex + side * (3 + Math.floor(Math.random() * Math.random() * 40))));
     if (!isEntranceColumn(x)) return x;
   }
   return -1;
@@ -272,7 +282,7 @@ function chooseDropColumn() {
 function startCarry(a) {
   a.carry = true;
   a.state = 'carry';
-  a.dropX = chooseDropColumn();
+  a.dropX = chooseDropColumn(a);
   if (a.dropX < 0) a.dropX = world.entranceX + 12;
   const top = columnTop(a.dropX);
   const goal = bfs(idx(a.x, a.y), i => {
@@ -319,11 +329,12 @@ function finishTimer(a) {
       // Ein Maul voll Sand abbeißen (nur an der offenen Wand, in Reichweite der Ameise)
       if (tip && world.tips.includes(tip)) n = digStep(tip, a.x, a.y, 12);
       a.tip = null;
+      a.sand = n;
       if (n > 0) startCarry(a); else decide(a);
       break;
     }
     case 'dropping':
-      placeGrain(a.dropX);
+      placeGrain(a.dropX, Math.floor((a.sand || 4) / 8 + Math.random()));   // etwa ein Achtel des Ausgegrabenen bleibt als Hügel
       a.carry = false;
       decide(a);
       break;

@@ -141,6 +141,11 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Umzug der Königin (derzeit AUS, PLAN.royalMoves = 0, Nutzerwunsch): ab 60/120/… Ameisen graben sie tiefer unten eine neue Königskammer; ist sie fertig,
   holen 4 Arbeiterinnen die Königin ab und begleiten sie hinunter (vorne/hinten). Alte Kammer bekommt neue Aufgabe.
   Baustellen ohne Fortschritt (150 s) werden aufgegeben.
+- Nutzerwünsche (Runde 2): Königskammer 1,5× so groß (PLAN.royalSize). Neue Ausgänge mit wachsender Kolonie (1 je 50
+  Ameisen, max. 4) dort, wo Futter weit weg vom nächsten Eingang wächst. Sand-Hügel an jedem Eingang, flach und breit,
+  wächst mit dem Graben (ca. 1/8 des Aushubs). Steinplatten an den Schichtgrenzen mit wenigen Lücken (Ameisen
+  tasten sich entlang). Zeitraffer-Schieber bis 100×. Ameisen laufen bis 2 Pixel von der Wand entfernt (nicht nur an
+  der Wand), damit sie Nischen nicht umrunden müssen.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

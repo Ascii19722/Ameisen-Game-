@@ -48,13 +48,23 @@ function nearTunnel(x, y) {
   return false;
 }
 
+// Luft mitten im Sandhügel (der Eingang führt durch den Hügel) wird wie ein Gang gezeichnet
+function inMound(x, y) {
+  let l = false, r = false;
+  for (let d = 1; d <= 3; d++) {
+    if (x - d >= 0 && world.cells[y * W + x - d] === LOOSE) l = true;
+    if (x + d < W && world.cells[y * W + x + d] === LOOSE) r = true;
+  }
+  return l && r;
+}
+
 function cellColor(x, y) {
   const i = y * W + x;
   const cell = world.cells[i];
   const g = world.grain[i];
 
   if (cell === AIR) {
-    if (!isUnderground(x, y)) return 0;   // Himmel scheint durch
+    if (!isUnderground(x, y) && !inMound(x, y)) return 0;   // Himmel scheint durch
     // Gang: braun mit Schichtfarbe, bröckliger Rand (helle Krümel am Boden, dunklere Ränder)
     const base = LAYER_COLORS[layerOf(x, y)][0];
     let edge = false;

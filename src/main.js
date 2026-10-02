@@ -155,7 +155,11 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (!paused) for (let k = 0; k < speed; k++) step(dt);
+  // Zeitraffer: bis 16 Rechenschritte pro Bild, darüber werden die Schritte größer (sonst ruckelt es)
+  if (!paused) {
+    const n = Math.min(speed, 16), sub = dt * speed / n;
+    for (let k = 0; k < n; k++) step(sub);
+  }
   moveCam(dt);
   render(ctx, canvas.width, canvas.height, cam);
   drawHud();
@@ -177,11 +181,17 @@ tempoButtons.forEach(b => b.addEventListener('click', () => {
   else { speed = v; paused = false; }
   b.blur();
 }));
+// Schieber für den Zeitraffer (1× bis 100×)
+const warp = document.getElementById('warp'), warpText = document.getElementById('warpText');
+warp.addEventListener('input', () => { speed = +warp.value; paused = false; });
+warp.addEventListener('change', () => warp.blur());
 function updateTempoButtons() {
   tempoButtons.forEach(b => {
     const v = +b.dataset.s;
     b.classList.toggle('an', v === 0 ? paused : !paused && v === speed);
   });
+  if (+warp.value !== speed) warp.value = speed;
+  warpText.textContent = speed + '×';
 }
 
 // Bau-Editor: erst speichern, dann wechseln (von dort geht es mit „Zurück zum Spiel“ wieder hierher)

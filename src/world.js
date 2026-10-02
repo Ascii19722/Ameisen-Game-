@@ -24,6 +24,7 @@ const PLAN = {
   stub: 9,           // Länge des Stummels zu einer Seitenkammer
   chamberSize: 2.3,  // Größe der Kammern (ca. 3,5 Ameisen breit)
   queenDepth: [105, 125],   // so tief gräbt die Königin ihren Schacht (Nutzerwunsch: etwa auf halber Höhe)
+  royalSize: 1.5,    // Königskammer ist so viel größer als andere Kammern
   royalMoves: 0,     // wie oft die Königin in eine tiefere Kammer umzieht (0 = nie, Nutzerwunsch)
 };
 
@@ -113,7 +114,9 @@ function generateWorld() {
   for (let i = 0; i < N; i++) world.grain[i] = Math.random();
   makeTexture();
   world.entranceX = randInt(Math.floor(W * 0.4), Math.floor(W * 0.6));
+  world.entrances = [world.entranceX];   // weitere Eingänge kommen mit der Zeit dazu
   makeRocks();
+  makePlates();
 
   // Eingang und erste Grabstelle: die Königin gräbt zuerst tief nach unten
   carve(world.entranceX, SURFACE_Y + 1, TUNNEL_R);
@@ -159,6 +162,26 @@ function makeRocks() {
   for (let k = 0; k < 90; k++) makeRock(rand(0, W), rand(SURFACE_Y + 6, H - 2), rand(1, 2.4), rand(0.8, 1.6), true);
 }
 
+// Steinplatten an den Grenzen zwischen den Bodenschichten. Sie haben ein paar Lücken – wo, wissen
+// die Ameisen nicht: Sie stoßen auf die Platte und tasten sich daran entlang, bis sie eine Lücke finden.
+function makePlates() {
+  for (const l of [1, 2]) {
+    const gaps = [];
+    const n = randInt(2, 4);
+    for (let k = 0; k < n; k++) gaps.push([rand(20, W - 20), rand(5, 9)]);
+    let thick = 2;
+    for (let x = 0; x < W; x++) {
+      if (gaps.some(([gx, gw]) => Math.abs(x - gx) < gw + rand(-1, 1))) continue;
+      if (Math.random() < 0.15) thick = Math.max(2, Math.min(4, thick + (Math.random() < 0.5 ? -1 : 1)));
+      const yb = world.layers[l][x];
+      for (let t = 0; t < thick; t++) {
+        const y = yb - 1 + t;
+        if (y > SURFACE_Y + 6 && y < H - 2) world.cells[idx(x, y)] = ROCK;
+      }
+    }
+  }
+}
+
 // ---------- Graben ----------
 
 // Gräbt eine runde Stelle frei (Steine bleiben stehen). Liefert die Zahl der entfernten Zellen.
@@ -183,9 +206,9 @@ function newTip(x, y, dir, max, kind) {
 }
 
 // Weltrand und Steine: werden erst bemerkt, wenn die Ameise dagegen stößt (kein Röntgenblick)
-function blockedAt(x, y) {
+function blockedAt(x, y, up = false) {
   const xi = Math.round(x), yi = Math.round(y);
-  return xi < 3 || xi >= W - 3 || yi < SURFACE_Y || yi >= H - 3 || world.cells[idx(xi, yi)] === ROCK;
+  return xi < 3 || xi >= W - 3 || (yi < SURFACE_Y && !up) || yi >= H - 3 || world.cells[idx(xi, yi)] === ROCK;
 }
 
 // Bekannte Gänge (die Ameisen laufen darin herum und kennen sie)
@@ -233,8 +256,9 @@ function bite(cx, cy, r, floorY, ax, ay, budget) {
 // Liefert false, wenn gerade kein Stück da ist (Stein im Weg oder Gang zu Ende).
 function planStep(tip) {
   let c = (Math.random() - 0.5) * PLAN.wiggle;
-  const want = tip.kind === 'branch' ? tip.bias : Math.PI / 2;
-  if (tip.kind !== 'stub' && !tip.stuck) c += angleTo(tip.dir, want) * PLAN.down * (tip.kind === 'branch' ? 1.6 : 1);
+  const side = tip.kind === 'branch' || tip.kind === 'exit';
+  const want = side ? tip.bias : Math.PI / 2;
+  if (tip.kind !== 'stub' && !tip.stuck) c += angleTo(tip.dir, want) * PLAN.down * (side ? 1.6 : 1);
   // Abstand zu bekannten Gängen halten
   if (tip.len > 3) {
     for (const sd of [-1, 1]) {
@@ -248,13 +272,13 @@ function planStep(tip) {
     }
   }
   tip.dir += c;
-  if (Math.sin(tip.dir) < -0.35) tip.dir += 0.2 * Math.sign(Math.cos(tip.dir) || 1);
+  if (tip.kind !== 'exit' && Math.sin(tip.dir) < -0.35) tip.dir += 0.2 * Math.sign(Math.cos(tip.dir) || 1);
 
   // Stößt die Ameise an einen Stein, tastet sie sich zur Seite entlang
   const front = a => {
     for (const off of [-TUNNEL_R, 0, TUNNEL_R]) {
       if (blockedAt(tip.x + Math.cos(a) * (TUNNEL_R + 0.9) - Math.sin(a) * off,
-        tip.y + Math.sin(a) * (TUNNEL_R + 0.9) + Math.cos(a) * off)) return true;
+        tip.y + Math.sin(a) * (TUNNEL_R + 0.9) + Math.cos(a) * off, tip.kind === 'exit')) return true;
     }
     return false;
   };
@@ -262,7 +286,7 @@ function planStep(tip) {
     if (!tip.wall) tip.wall = Math.random() < 0.5 ? -1 : 1;
     tip.dir += tip.wall * rand(0.35, 0.6);
     tip.stuck++;
-    if (tip.stuck > 45) endTip(tip, false);
+    if (tip.stuck > 80) endTip(tip, false);   // lange an Stein oder Platte entlanggetastet: aufgeben
     return false;
   }
   if (tip.stuck) { tip.stuck = Math.max(0, tip.stuck - 1); if (!tip.stuck && Math.random() < 0.3) tip.wall = 0; }
@@ -298,6 +322,12 @@ function digStep(tip, ax, ay, budget) {
     tip.goal = null;
     tip.len++;
     if (tip.len % 3 === 0 && tip.kind !== 'stub') world.pts.push([tip.x, tip.y, tip.dir]);
+    // Ausgang erreicht die Oberfläche: neuer Eingang
+    if (tip.kind === 'exit' && tip.y <= world.surface[Math.round(tip.x)] + 1) {
+      (world.entrances || (world.entrances = [world.entranceX])).push(Math.round(tip.x));
+      removeTip(tip);
+      break;
+    }
     if (tip.len >= tip.max) endTip(tip, !tip.through);
   }
   if (n) tip.touched = world.time || 0;
@@ -312,7 +342,7 @@ function removeTip(tip) {
 // Ende eines Gangs: vielleicht eine Kammer, wenn Platz ist
 function endTip(tip, reached) {
   removeTip(tip);
-  if (tip.through) return;
+  if (tip.through || tip.kind === 'exit') return;
   const cx = tip.x + Math.cos(tip.dir) * 6, cy = tip.y + Math.sin(tip.dir) * 2;
   // Seitengänge enden fast immer in einer Kammer (auch wenn ein Stein sie aufhält, sofern sie lang genug sind)
   const side = tip.kind === 'branch' && (reached || tip.len > 25) && Math.random() < 0.6;   // nicht jeder Gang braucht eine Kammer
@@ -346,9 +376,10 @@ function chamberSpace(cx, cy, ax, ay) {
 // Eine Kammer entsteht aus vielen kleinen Grab-Bewegungen; der Boden wird flachgetreten
 // Die Grab-Bewegungen starten am Gang (ex, ey) und arbeiten sich von dort in die Kammer hinein.
 function startRoom(cx, cy, royal, ex, ey) {
-  const k = PLAN.chamberSize * (royal ? 1.15 : 1), rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + 1);
+  const f = royal ? PLAN.royalSize : 1;   // die Königskammer ist größer
+  const k = PLAN.chamberSize * f, rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + 1);
   const blobs = [];
-  for (let n = 0; n < 34; n++) {
+  for (let n = 0; n < Math.round(34 * f * f); n++) {
     const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
     blobs.push([cx + Math.cos(a) * d * rx * 0.75, floor - ry + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k)]);
   }
@@ -452,6 +483,27 @@ function updatePlan(dt) {
       world.tips.push(t);
     }
   }
+  // Mit wachsender Kolonie neue Ausgänge nach oben – dort, wo Futter wächst und noch kein Eingang ist
+  const ents = world.entrances || (world.entrances = [world.entranceX]);
+  if (ents.length < Math.min(4, 1 + Math.floor(ants.length / 50)) && !world.tips.some(t => t.kind === 'exit') && Math.random() < dt * 0.05) {
+    const far = colony.sources.filter(q => q.amount > 0 && Math.min(...ents.map(e => Math.abs(e - q.x))) > 40);
+    if (far.length) {
+      const q = far[randInt(0, far.length - 1)];
+      let best = null, bd = Infinity;
+      for (const p of world.pts) {
+        if (p[1] > SURFACE_Y + 80 || nearRoyal(p)) continue;
+        const d = Math.abs(p[0] - q.x) + (p[1] - SURFACE_Y) * 0.5;
+        if (d < bd) { bd = d; best = p; }
+      }
+      if (best && Math.abs(best[0] - q.x) < 90) {
+        let dir = Math.atan2(SURFACE_Y - best[1], q.x - best[0]);
+        dir = Math.max(-Math.PI + 0.6, Math.min(-0.6, dir));   // eher nach oben als zur Seite
+        const t = newTip(best[0], best[1], dir, (best[1] - SURFACE_Y) / 0.8 * 2 + 20, 'exit');
+        t.bias = dir;
+        world.tips.push(t);
+      }
+    }
+  }
   // Seitenkammer über einen kurzen Stummel – nur draußen an Seitengängen, nicht am Hauptschacht
   if (world.tips.length < 2 + nest / 4 && world.pts.length > 30 && Math.random() < dt * 0.12 * Math.min(1, nest / 4)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];
@@ -477,10 +529,16 @@ function isEntranceColumn(x) {
   return columnTop(x) > world.surface[x];
 }
 
-function placeGrain(x) {
-  if (Math.random() > 0.35) return;
+// Eine Ladung Sand oben ablegen (mehrere Krümel); er rutscht ab wie echter Sand → Hügel
+function placeGrain(x, count = 1) {
+  for (let k = 0; k < count; k++) placeOneGrain(x);
+}
+// Neben einem Eingangsloch bleibt eine Spalte frei, damit der Eingang durch den Hügel nicht zu eng wird
+const nearHole = x => isEntranceColumn(x) || isEntranceColumn(x - 1) || isEntranceColumn(x + 1);
+
+function placeOneGrain(x) {
   const top = columnTop(x);
-  if (top <= 10 || isEntranceColumn(x)) return;
+  if (top <= 10 || nearHole(x)) return;
   world.cells[idx(x, top - 1)] = LOOSE;
   let y0 = top - 1, y1 = top - 1, x0 = x, x1 = x;
   for (let step = 0; step < 60; step++) {
@@ -490,9 +548,10 @@ function placeGrain(x) {
     let moved = false;
     for (const d of dirs) {
       const nx = x + d;
-      if (nx < 1 || nx >= W - 1 || isEntranceColumn(nx)) continue;
+      if (nx < 1 || nx >= W - 1 || nearHole(nx)) continue;
       const nh = columnTop(nx);
-      if (nh > h + 1 || (nh > h && Math.random() < 0.4)) {
+      // flacher Hügel: Sand rutscht leicht ab und verteilt sich auch auf ebenem Boden ein Stück
+      if (nh > h + 1 || (nh > h && Math.random() < 0.9) || (nh === h && Math.random() < 0.3)) {
         world.cells[idx(x, h)] = AIR;
         world.cells[idx(nx, nh - 1)] = LOOSE;
         x = nx;
@@ -503,5 +562,5 @@ function placeGrain(x) {
     }
     if (!moved) break;
   }
-  markDirty(x0 - 1, y0 - 1, x1 + 1, y1 + 1);
+  markDirty(x0 - 4, y0 - 1, x1 + 4, y1 + 1);   // breiter, damit der Gang durch den Hügel neu gezeichnet wird
 }

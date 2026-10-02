@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ameisen-Sim – Bau-Editor</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #140d08; overflow: hidden; font: 14px system-ui, sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+    #leiste { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      padding: 8px 10px; border-radius: 10px; background: rgba(240, 233, 220, 0.95); border: 2px solid rgba(120, 100, 80, 0.35); color: #3e3128; }
+    #leiste button, #leiste select { padding: 6px 10px; border-radius: 8px; border: 2px solid rgba(120, 100, 80, 0.35);
+      background: #fbf6ec; color: #3e3128; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+    #leiste button.an { background: #b5704a; color: #fff6ea; border-color: #8a5236; }
+    #leiste .trenner { width: 1px; height: 26px; background: rgba(120, 100, 80, 0.35); margin: 0 4px; }
+    #hilfe { position: fixed; bottom: 10px; left: 12px; color: rgba(240, 230, 210, 0.75); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <canvas id="screen"></canvas>
+  <div id="leiste">
+    <b>BAU-EDITOR</b>
+    <span class="trenner"></span>
+    <button data-tool="gang" class="an" title="Taste 1">⛏ Gang graben</button>
+    <button data-tool="kammer" title="Taste 2">◯ Kammer</button>
+    <select id="rolle" title="Aufgabe der nächsten Kammer">
+      <option value="queen">👑 Königin</option>
+      <option value="food">Vorrat (Futter)</option>
+      <option value="eggs">Eier</option>
+      <option value="larvae">Larven</option>
+      <option value="pupae">Puppen (Kokons)</option>
+      <option value="waste">Abfall</option>
+      <option value="reserve">leer / Reserve</option>
+    </select>
+    <button data-tool="fuellen" title="Taste 3">▒ Zuschütten</button>
+    <span>Pinsel</span><input id="pinsel" type="range" min="1" max="5" step="0.5" value="2.2">
+    <span class="trenner"></span>
+    <button id="zurueck" title="Strg+Z">↶ Zurück</button>
+    <button id="leeren">Alles leeren</button>
+    <span class="trenner"></span>
+    <button id="bild">💾 Bild speichern</button>
+    <button id="datei">💾 Datei speichern</button>
+    <button id="spielen">▶ Im Spiel ausprobieren</button>
+    <button id="spiel">✕ Zurück zum Spiel</button>
+  </div>
+  <div id="hilfe">Linke Maustaste: malen · Rechtsklick auf eine Kammer: Markierung entfernen · Mausrad: Zoom · Leertaste + Ziehen: verschieben</div>
+
+  <script src="../src/world.js"></script>
+  <script src="../src/colony.js"></script>
+  <script src="../src/ants.js"></script>
+  <script src="../src/enemies.js"></script>
+  <script src="../src/sky.js"></script>
+  <script src="../src/sprites.js"></script>
+  <script src="../src/render.js"></script>
+  <script src="../src/save.js"></script>
+  <script>
+  'use strict';
+  // Bau-Editor: Gänge und Kammern von Hand malen, um zu zeigen, wie das Nest aussehen soll.
+  // Nutzt dieselben Zeichen-Dateien wie das Spiel, damit alles genauso aussieht.
+  const canvas = document.getElementById('screen');
+  const ctx = canvas.getContext('2d');
+  const cam = { x: W / 2, y: H / 2, zoom: 1 };
+  let tool = 'gang';
+  const marks = [];   // Kammern {x, y, role}
+  const undo = [];
+  const ROLE_TEXT = { queen: 'KÖNIGIN', food: 'VORRAT', eggs: 'EIER', larvae: 'LARVEN', pupae: 'PUPPEN', waste: 'ABFALL', reserve: 'RESERVE' };
+
+  function fit() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(innerWidth * dpr);
+    canvas.height = Math.round(innerHeight * dpr);
+    cam.zoom = Math.min(canvas.width / W, (canvas.height - 60 * dpr) / H);
+    cam.x = W / 2; cam.y = H / 2 - 30 * dpr / cam.zoom;
+  }
+  addEventListener('resize', fit);
+
+  function neu() {
+    generateWorld();
+    world.tips = [];       // nichts wird von selbst gegraben
+    resetColony();
+    generateSky();
+    sky.time = 0.45;
+    ants.length = 0;
+    marks.length = 0;
+    undo.length = 0;
+  }
+
+  function snapshot() {
+    undo.push({ cells: world.cells.slice(), marks: marks.map(m => ({ ...m })) });
+    if (undo.length > 40) undo.shift();
+  }
+  function zurueck() {
+    const u = undo.pop();
+    if (!u) return;
+    world.cells.set(u.cells);
+    marks.length = 0;
+    marks.push(...u.marks);
+    world.dirtyRect = { x0: 0, y0: 0, x1: W - 1, y1: H - 1 };
+    world.dirty = true;
+  }
+
+  const toWorld = (sx, sy) => [cam.x + (sx - canvas.width / 2) / cam.zoom, cam.y + (sy - canvas.height / 2) / cam.zoom];
+  const pinsel = () => +document.getElementById('pinsel').value;
+
+  // Zuschütten: Sand zurück in den Boden (nur unter der Oberfläche, Steine bleiben)
+  function fill(cx, cy, r) {
+    for (let y = Math.floor(cy - r); y <= cy + r; y++) {
+      for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H || (x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+        if (y >= world.surface[x] && world.cells[idx(x, y)] === AIR) world.cells[idx(x, y)] = SAND;
+      }
+    }
+    markDirty(Math.floor(cx - r) - 1, Math.floor(cy - r) - 1, Math.ceil(cx + r) + 1, Math.ceil(cy + r) + 1);
+  }
+
+  // Kammer wie im Spiel: viele kleine, unregelmäßige Grab-Bewegungen, flacher Boden
+  function kammer(cx, cy, role) {
+    const k = PLAN.chamberSize * (role === 'queen' ? 1.15 : 1), rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + ry * 0.45);
+    for (let n = 0; n < 40; n++) {
+      const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
+      carve(cx + Math.cos(a) * d * rx * 0.75, floor - ry * 0.9 + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k), floor);
+    }
+    if (role === 'queen') for (let i = marks.length - 1; i >= 0; i--) if (marks[i].role === 'queen') marks.splice(i, 1);   // nur eine Königin
+    marks.push({ x: cx, y: floor, role });
+  }
+
+  let malt = false, last = null, ziehen = null, space = false;
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('mousedown', e => {
+    const dpr = devicePixelRatio || 1, sx = e.offsetX * dpr, sy = e.offsetY * dpr;
+    if (space || e.button === 1) { ziehen = { x: sx, y: sy }; return; }
+    const [wx, wy] = toWorld(sx, sy);
+    if (e.button === 2) {   // Kammer-Markierung entfernen
+      const i = marks.findIndex(m => Math.hypot(m.x - wx, m.y - wy) < 10);
+      if (i >= 0) { snapshot(); marks.splice(i, 1); }
+      return;
+    }
+    snapshot();
+    if (tool === 'kammer') { kammer(wx, wy, document.getElementById('rolle').value); return; }
+    malt = true; last = [wx, wy];
+    paint(wx, wy);
+  });
+  addEventListener('mouseup', () => { malt = false; ziehen = null; });
+  canvas.addEventListener('mousemove', e => {
+    const dpr = devicePixelRatio || 1, sx = e.offsetX * dpr, sy = e.offsetY * dpr;
+    if (ziehen) { cam.x -= (sx - ziehen.x) / cam.zoom; cam.y -= (sy - ziehen.y) / cam.zoom; ziehen = { x: sx, y: sy }; return; }
+    if (!malt) return;
+    const [wx, wy] = toWorld(sx, sy);
+    // Linie zwischen den Mauspunkten, damit keine Lücken entstehen
+    const d = Math.hypot(wx - last[0], wy - last[1]), n = Math.max(1, Math.ceil(d / 0.7));
+    for (let i = 1; i <= n; i++) paint(last[0] + (wx - last[0]) * i / n, last[1] + (wy - last[1]) * i / n);
+    last = [wx, wy];
+  });
+  function paint(x, y) {
+    if (tool === 'gang') carve(x, y, pinsel() * (0.9 + Math.random() * 0.2));   // leicht unregelmäßig wie gegraben
+    else if (tool === 'fuellen') fill(x, y, pinsel() + 0.5);
+  }
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const dpr = devicePixelRatio || 1, sx = e.offsetX * dpr, sy = e.offsetY * dpr;
+    const [wx, wy] = toWorld(sx, sy);
+    cam.zoom = Math.max(0.5, Math.min(40, cam.zoom * Math.pow(1.0015, -e.deltaY)));
+    cam.x = wx - (sx - canvas.width / 2) / cam.zoom;
+    cam.y = wy - (sy - canvas.height / 2) / cam.zoom;
+  }, { passive: false });
+
+  function setTool(t) {
+    tool = t;
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('an', b.dataset.tool === t));
+  }
+  document.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => { setTool(b.dataset.tool); b.blur(); }));
+  addEventListener('keydown', e => {
+    if (e.code === 'Space') { space = true; e.preventDefault(); }
+    if (e.key === '1') setTool('gang');
+    if (e.key === '2') setTool('kammer');
+    if (e.key === '3') setTool('fuellen');
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { zurueck(); e.preventDefault(); }
+  });
+  addEventListener('keyup', e => { if (e.code === 'Space') space = false; });
+  document.getElementById('zurueck').onclick = zurueck;
+  document.getElementById('leeren').onclick = () => { if (confirm('Alles leeren und neu anfangen?')) neu(); };
+
+  function download(name, url) {
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  document.getElementById('spiel').onclick = () => { location.href = '../index.html'; };
+  document.getElementById('bild').onclick = () => download('mein-nest.png', canvas.toDataURL('image/png'));
+  document.getElementById('datei').onclick = () => {
+    const data = { entranceX: world.entranceX, cells: packRuns(world.cells), marks };
+    download('mein-nest.json', URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })));
+  };
+
+  // Das gemalte Nest als Spielstand speichern und das Spiel damit starten
+  document.getElementById('spielen').onclick = () => {
+    const q = marks.find(m => m.role === 'queen');
+    if (!q) { alert('Bitte zuerst eine Königinnen-Kammer setzen (Werkzeug „Kammer“, Aufgabe „Königin“).'); return; }
+    if (!confirm('Das Spiel startet mit diesem Nest. Ein gespeicherter Spielstand wird dabei ersetzt. Weiter?')) return;
+    world.chambers = marks.map((m, k) => ({ cx: m.x, cy: m.y - 3, floor: Math.round(m.y), id: k, royal: m.role === 'queen', role: m.role }));
+    world.royal = world.chambers.find(c => c.royal);
+    world.tips = [];
+    world.branchStarts = [];
+    // Punkte auf den Gängen merken, damit die Ameisen später von dort weitergraben können
+    world.pts = [];
+    let dug = 0;
+    for (let y = SURFACE_Y + 4; y < H; y += 6) for (let x = 0; x < W; x += 6) {
+      if (world.cells[idx(x, y)] === AIR) world.pts.push([x, y, Math.PI / 2]);
+    }
+    for (let y = SURFACE_Y; y < H; y++) for (let x = 0; x < W; x++) if (world.cells[idx(x, y)] === AIR && y >= world.surface[x]) dug++;
+    world.dug = dug;
+    spawnAnts();
+    const queen = ants.find(a => a.caste === 'queen');
+    queen.x = Math.round(world.royal.cx);
+    queen.y = world.royal.floor;
+    while (queen.y > 0 && world.cells[idx(queen.x, queen.y)] !== AIR) queen.y--;
+    sky.time = 0.4; sky.day = 1;
+    if (!saveGame()) { alert('Speichern hat nicht geklappt (Browser blockiert den Speicher).'); return; }
+    location.href = '../index.html';
+  };
+
+  function frame() {
+    render(ctx, canvas.width, canvas.height, cam);
+    // Beschriftung der Kammern
+    const dpr = devicePixelRatio || 1;
+    ctx.font = `700 ${Math.round(12 * dpr)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    for (const m of marks) {
+      const sx = (m.x - cam.x) * cam.zoom + canvas.width / 2, sy = (m.y - 14 - cam.y) * cam.zoom + canvas.height / 2;
+      const t = ROLE_TEXT[m.role], w = ctx.measureText(t).width + 12 * dpr;
+      ctx.fillStyle = m.role === 'queen' ? 'rgba(181, 112, 74, 0.95)' : 'rgba(240, 233, 220, 0.9)';
+      ctx.fillRect(sx - w / 2, sy - 11 * dpr, w, 16 * dpr);
+      ctx.fillStyle = m.role === 'queen' ? '#fff6ea' : '#3e3128';
+      ctx.fillText(t, sx, sy + 1 * dpr);
+    }
+    // Eingang markieren
+    const ex = (world.entranceX + 0.5 - cam.x) * cam.zoom + canvas.width / 2, ey = (SURFACE_Y - 8 - cam.y) * cam.zoom + canvas.height / 2;
+    ctx.fillStyle = 'rgba(240, 233, 220, 0.9)';
+    ctx.fillText('▼ EINGANG', ex, ey);
+    requestAnimationFrame(frame);
+  }
+
+  neu();
+  fit();
+  frame();
+  </script>
+</body>
+</html>

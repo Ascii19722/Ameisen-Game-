@@ -11,7 +11,10 @@
     #neu { position: fixed; top: 24px; right: 24px; padding: 10px 18px; border-radius: 10px;
       border: 2px solid rgba(120, 100, 80, 0.35); background: rgba(240, 233, 220, 0.94);
       color: #3e3128; font: 700 15px system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer; }
-    #neu:hover, #tempo button:hover { background: rgba(250, 244, 232, 0.98); }
+    #editor { position: fixed; top: 24px; right: 210px; padding: 10px 18px; border-radius: 10px;
+      border: 2px solid rgba(120, 100, 80, 0.35); background: rgba(240, 233, 220, 0.94);
+      color: #3e3128; font: 700 15px system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer; }
+    #neu:hover, #editor:hover, #tempo button:hover { background: rgba(250, 244, 232, 0.98); }
     /* Zeitsteuerung */
     #tempo { position: fixed; top: 76px; right: 24px; display: flex; gap: 6px; }
     #tempo button { padding: 6px 10px; border-radius: 8px; border: 2px solid rgba(120, 100, 80, 0.35);
@@ -22,6 +25,7 @@
 <body>
   <canvas id="screen"></canvas>
   <button id="neu" title="Taste N">NEUE KOLONIE</button>
+  <button id="editor" title="Nest selbst malen">BAU-EDITOR</button>
   <div id="tempo">
     <button data-s="0" title="Leertaste">❚❚</button>
     <button data-s="1" title="Taste 1">1×</button>

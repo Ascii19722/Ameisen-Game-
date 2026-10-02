@@ -5,7 +5,7 @@ set -e
 OUT=${1:-dist}
 mkdir -p "$OUT"
 TMP=$(mktemp -d)
-zip -qr "$TMP/spiel.zip" index.html src electron package.json
+zip -qr "$TMP/spiel.zip" index.html src tools electron package.json
 BAT="$OUT/Ameisen-Sim-Update.bat"
 {
   cat <<'KOPF'

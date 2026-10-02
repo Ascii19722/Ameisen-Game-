@@ -13,7 +13,7 @@ unzip -q "$OUT/$ZIP" -d "$OUT/Ameisen-Sim"
 mv "$OUT/Ameisen-Sim/electron.exe" "$OUT/Ameisen-Sim/Ameisen-Sim.exe"
 APP="$OUT/Ameisen-Sim/resources/app"
 mkdir -p "$APP"
-cp -r index.html src electron package.json "$APP/"
+cp -r index.html src tools electron package.json "$APP/"
 rm -f "$OUT/Ameisen-Sim-Windows.zip"
 (cd "$OUT" && zip -qr Ameisen-Sim-Windows.zip Ameisen-Sim)
 echo "Fertig: $OUT/Ameisen-Sim-Windows.zip"

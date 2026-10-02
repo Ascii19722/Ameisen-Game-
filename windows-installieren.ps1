@@ -31,7 +31,7 @@ Write-Host '  3/3  Kopiere das Spiel und lege die Verknüpfung auf den Desktop .
 $app = Join-Path $ziel 'resources\app'
 if (Test-Path $app) { Remove-Item $app -Recurse -Force }
 New-Item -ItemType Directory -Path $app | Out-Null
-foreach ($teil in 'index.html', 'src', 'electron', 'package.json') {
+foreach ($teil in 'index.html', 'src', 'tools', 'electron', 'package.json') {
   Copy-Item (Join-Path $quelle $teil) $app -Recurse -Force
 }
 

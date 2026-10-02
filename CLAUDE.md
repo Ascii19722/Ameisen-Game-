@@ -27,6 +27,9 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `src/enemies.js` – Feinde (Spinne, rote Räuber-Ameisen) und Kampf
 - `src/save.js` – Speichern im Browser (localStorage), „Neue Kolonie“
 - `src/main.js` – Start, Spielschleife, Tasten, HUD
+- `tools/bau-editor.html` – Bau-Editor (Sandkasten): Nutzer malt Gänge/Kammern (mit Aufgaben) im Spiel-Look,
+  speichert als Bild/JSON oder startet das Spiel damit. Im Spiel per Knopf „BAU-EDITOR“ erreichbar.
+  Bilder/Dateien, die der Nutzer daraus schickt = Vorlage, wie das Nest aussehen soll.
 - `electron/main.js` + `package.json` – Start als Programm (.exe); `build-exe.sh` baut die Windows-ZIP
   (lädt fertiges Electron herunter, kein npm install nötig). `Windows-installieren.bat` (+ .ps1) macht
   dasselbe direkt beim Nutzer unter Windows und legt eine Verknüpfung auf den Desktop.

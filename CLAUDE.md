@@ -61,6 +61,9 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   Haken + Königskammer → zweiter Bogen trifft den ersten (Schleife) → Seitenkammern nach außen →
   Stamm mit Ästen nach unten. Gänge halten deutlich Abstand zueinander (Favorit: Bogen „Bild 6
   weiterentwickelt“ Nr. 6). Kammern flach und mehrlappig, oben groß, unten kleiner (echte Nester).
+- Kammern NICHT dicht aneinander: wie im ants.sim-Video klein und rund (ca. 3–4× Gangbreite),
+  zwischen zwei Kammern mindestens eine Kammerbreite Sand (Mindestabstand), Kammern am Ende von
+  Ästen oder an Knicken, an einem kurzen Stummel. Viel freier Sand rund ums Nest.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

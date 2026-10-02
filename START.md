@@ -22,7 +22,7 @@ Tasten:
 | 4 | Beute gemeinsam tragen, Abfallkammer/Abfallhaufen, Brut nach Wärme, Zeitknöpfe | fertig |
 | 5 | Feinde: Spinne an der Oberfläche, rote Räuber-Ameisen; Kampf, Soldatinnen verteidigen | fertig |
 | 6 | Ambient-Sound | offen |
-| 7 | Größere Welt, .exe | offen |
+| 7 | Größere Welt, .exe | .exe fertig (build-exe.sh), Rest offen |
 
 ## Vorbilder
 - **Grafik: @ants.sim** – Bodenschichten (Humus, Sand, roter Lehm, grauer Untergrund) mit

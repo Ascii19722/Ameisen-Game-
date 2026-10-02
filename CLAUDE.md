@@ -27,6 +27,8 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `src/enemies.js` – Feinde (Spinne, rote Räuber-Ameisen) und Kampf
 - `src/save.js` – Speichern im Browser (localStorage), „Neue Kolonie“
 - `src/main.js` – Start, Spielschleife, Tasten, HUD
+- `electron/main.js` + `package.json` – Start als Programm (.exe); `build-exe.sh` baut die Windows-ZIP
+  (lädt fertiges Electron herunter, kein npm install nötig)
 
 ## Optik
 - Pixel-Art: alles wird erst in kleiner Auflösung (320×180) gezeichnet und dann

@@ -43,6 +43,9 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Pflegerin = P7: grau-schwarz (Körper 52,48,50 / Glanz 112,106,110 / Beine 40,38,40), klein (Größe 1.05, Hinterleib 0.9).
 - Junge Königin (Flieger) = P11: schwarz, Größe 1.85, Flügel, zwei Knoten.
 - Männchen = P27: grau-schwarz, schlank (Größe 1.45, kleiner Kopf 0.75), Flügel.
+- Schwerkraft: Eier, Larven, Kokons (und später Futter), die abgelegt werden, fallen nach unten
+  und bleiben auf dem Kammerboden oder aufeinander liegen (rutschen schräg ab wie Sand).
+- Gang-Stil: Auswahl aus G1–G16 steht noch aus.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

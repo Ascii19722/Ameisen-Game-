@@ -34,8 +34,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 ## Ameisen-Design (vom Nutzer ausgewählt)
 - Ameisen von oben, eckig, Pixel-Art mit harten Kanten (Posen werden vorgezeichnet, `render.js`).
 - Arbeiterin = Design A11: schwarz, schlank (Hinterleib/Brust 0.85, Kopf 0.9), Beine 1.1, feine Pixel (ANT_RES 4), Größe 1.4.
-- Königin: Grundform K1 (schwarz, groß, Flügelstummel), mit längerem Hinterleib und Streifen/Farben; genaue Variante (Q1–Q30) steht noch aus.
-- Soldatin: soll offene Kiefer haben; Auswahl aus 30 Vorschlägen (Zange/Säbel/Zahn × 10 Farben) steht noch aus.
+- Königin: Q3 = K1 (schwarz, groß, Flügelstummel) mit längerem Hinterleib und braunen Streifen. Hinterleib
+  aus Platten mit gebogenen braunen Fugen, vorne schmal, hinten rund (nicht abgeschnitten); Variante Q3-1…Q3-15 steht noch aus.
+- Soldatin: Säbel-Kiefer (lang, offen, Spitzen nach innen). Favoriten S11 (schwarz) und S17 (grau-schwarz);
+  Vorschlag: S11 = normale Soldatin, S17 = große Wächterin – Entscheidung steht noch aus.
 - Pflegerin = P7: grau-schwarz (Körper 52,48,50 / Glanz 112,106,110 / Beine 40,38,40), klein (Größe 1.05, Hinterleib 0.9).
 - Junge Königin (Flieger) = P11: schwarz, Größe 1.85, Flügel, zwei Knoten.
 - Männchen = P27: grau-schwarz, schlank (Größe 1.45, kleiner Kopf 0.75), Flügel.

@@ -51,7 +51,12 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   WICHTIG: nichts perfekt rund – Kammern schief und beulig, Boden leicht krumm, Gangbreite schwankt
   (gegraben hat immer Macken). Stil wie „G31 unregelmäßig G9“ (mit Brut am Boden) gefällt.
   Gänge sollen LANG sein: Seitengänge laufen weit hinaus, bevor sie in eine Kammer münden;
-  Hauptgang windet sich in Bögen nach unten. Variante L1–L6 (Abzweige/Schleifen) steht noch aus.
+  Hauptgang windet sich nach unten. Favorit war L3 (lang, Kammern weit draußen).
+- Gänge NICHT vorberechnen (keine festen Bögen/Pläne)! Sie entstehen beim Graben: jede grabende Ameise
+  hat eine grobe Wunschrichtung, wackelt zufällig, weicht Steinen aus, zweigt manchmal ab, verbindet
+  sich selten mit anderen Gängen, und gräbt am Ende eine Kammer aus vielen kleinen Grab-Bewegungen
+  (Boden wird flachgetreten). Siehe Vorschau-Bogen „Selbst gegraben“. Die aktuelle Gangplanung in
+  world.js (Zickzack-Plan) muss dafür in Stufe 3 ersetzt werden.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

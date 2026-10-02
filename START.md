@@ -16,7 +16,9 @@ Tasten:
 |---|---|---|
 | 1 | Sand-Look, Ameisen graben Tunnel | ✅ fertig |
 | 2 | Himmel, Wald, Wolken, Tag/Nacht, Look wie @ants.sim | ✅ fertig |
-| 3 | Kolonie wächst, Brut, Königin, HUD, Speichern | offen |
+| 3a | Große Welt mit Zoom, Ameisen von der Seite, Graben nach Bauplan, Sandhügel | fertig |
+| 3b | Königin legt Eier → Larven → Puppen → neue Ameisen, Kammer-Aufgaben | offen |
+| 3c | HUD mit echten Zahlen, Speichern, "Neue Kolonie" | offen |
 | 4 | Futtersuche draußen, Vorratskammern, Futter ablegen, Zeitsteuerung | offen |
 | 5 | Feinde und Kampf | offen |
 | 6 | Ambient-Sound | offen |
@@ -78,7 +80,7 @@ Tasten:
 4. Zwei große Sandhaufen links und rechts vom Eingang wachsen mit dem Nest.
 
 ## Prompt für die nächste Stufe
-> Lies CLAUDE.md und START.md. Baue Stufe 3 nach dem Spielablauf von fieldnotes.sim
+> Lies CLAUDE.md und START.md. Baue Stufe 3b nach dem Spielablauf von fieldnotes.sim
 > (Abschnitt "Vorbilder", Punkte 1–4): Gründung durch die Königin, Königskammer, Eier → Larven →
 > Puppen → neue Arbeiterinnen und Soldatinnen, Puppenkammer, Kammern mit Aufgabe und Farbe.
 > Brut-Zahl in der Info-Karte, Speichern im Browser und ein Knopf "Neue Kolonie".

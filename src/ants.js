@@ -1,11 +1,10 @@
 'use strict';
 
-const ANT_COUNT = 30;
+const WORKER_COUNT = 30;
 const ants = [];
-const reserved = new Map();   // Zelle -> Ameise, die sie gerade abgräbt
 
 // ---------- Wegfindung (Breitensuche auf dem Raster) ----------
-// Ameisen laufen nur an Wänden, Böden und Decken entlang, nie frei durch die Luft.
+// Ameisen laufen an Böden, Wänden und Decken entlang, nie frei durch die Luft.
 
 const bfsPrev = new Int32Array(N);
 const bfsMark = new Uint32Array(N);
@@ -37,8 +36,7 @@ function bfs(start, isGoal, maxNodes) {
       if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
       const j = ny * W + nx;
       if (bfsMark[j] === bfsStamp || !isWalkable(nx, ny)) continue;
-      // nicht diagonal durch eine Ecke quetschen
-      if (k >= 4 && solidAt(nx, y) && solidAt(x, ny)) continue;
+      if (k >= 4 && solidAt(nx, y) && solidAt(x, ny)) continue;   // nicht durch Ecken quetschen
       bfsMark[j] = bfsStamp;
       bfsPrev[j] = i;
       bfsQueue[tail++] = j;
@@ -56,32 +54,32 @@ function buildPath(goal) {
 
 // ---------- Ameisen ----------
 
-function createAnt(x, y) {
+function createAnt(x, y, caste) {
   return {
-    x, y,               // aktuelle Zelle
-    path: null, pi: 0,  // Weg und Position darin
-    t: 0,               // Fortschritt zur nächsten Zelle (0..1)
-    dx: 1, dy: 0,       // Blickrichtung (Zellen-Schritt)
-    angle: rand(-Math.PI, Math.PI), // Drehung beim Zeichnen, folgt der Blickrichtung weich
-    speed: rand(6, 9),  // Zellen pro Sekunde
+    caste, x, y,
+    path: null, pi: 0, t: 0,
+    mx: 1, my: 0,           // letzte Bewegungsrichtung
+    rot: 0,                 // Drehung des Körpers (Füße zeigen zum Boden)
+    face: 1,                // 1 = schaut nach „vorne“ entlang des Bodens, -1 = andersherum
+    turn: 0,                // Restzeit der Umdreh-Bewegung
+    speed: caste === 'queen' ? 3 : rand(6, 9),
     state: 'rest',
-    timer: rand(0, 3),
-    target: -1,
+    timer: rand(0, 2),
+    tip: null,
     dropX: 0,
     carry: false,
-    walk: Math.random(), // für die Beinbewegung
+    walk: Math.random() * 8,
   };
 }
 
 function spawnAnts() {
   ants.length = 0;
-  reserved.clear();
   const ex = world.entranceX;
-  for (let k = 0; k < ANT_COUNT; k++) {
-    const side = Math.random() < 0.5 ? -1 : 1;
-    const x = ex + side * randInt(3, 18);
-    ants.push(createAnt(x, columnTop(x) - 1));
+  for (let k = 0; k < WORKER_COUNT; k++) {
+    const x = ex + (Math.random() < 0.5 ? -1 : 1) * randInt(4, 26);
+    ants.push(createAnt(x, columnTop(x) - 1, 'worker'));
   }
+  ants.push(createAnt(ex + 2, SURFACE_Y - 1, 'queen'));
 }
 
 function setPath(a, goal) {
@@ -92,51 +90,72 @@ function setPath(a, goal) {
   return true;
 }
 
-function releaseTarget(a) {
-  if (a.target >= 0 && reserved.get(a.target) === a) reserved.delete(a.target);
-  a.target = -1;
+function antsAt(tip) {
+  let n = 0;
+  for (const a of ants) if (a.tip === tip) n++;
+  return n;
 }
 
-// Was macht die Ameise als Nächstes?
+// Wo gräbt die Ameise an einer Grabstelle? Kurz vor der Spitze, in Grabrichtung.
+function tipFront(tip) {
+  if (tip.kind === 'room') {
+    const b = tip.blobs[0] || [tip.cx, tip.cy];
+    return [b[0], Math.min(b[1], tip.floor)];
+  }
+  return [tip.x + Math.cos(tip.dir) * 1.5, tip.y + Math.sin(tip.dir) * 1.5];
+}
+
 function decide(a) {
-  releaseTarget(a);
-  if (Math.random() < 0.75) {
-    const t = findDigTask(reserved);
-    if (t >= 0) {
-      const tx = t % W, ty = (t / W) | 0;
+  a.tip = null;
+  if (a.caste === 'queen') { queenDecide(a); return; }
+  // Eine Grabstelle aussuchen, an der noch Platz ist
+  const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' ? 5 : 4));
+  if (open.length && Math.random() < 0.85) {
+    const tip = open[randInt(0, open.length - 1)];
+    const [fx, fy] = tipFront(tip);
+    const goal = bfs(idx(a.x, a.y), i => {
+      const x = i % W, y = (i / W) | 0;
+      return Math.hypot(x - fx, y - fy) < TUNNEL_R + 2.5;
+    }, N);
+    if (setPath(a, goal)) { a.tip = tip; a.state = 'toDig'; return; }
+  }
+  if (Math.random() < 0.35) { a.state = 'rest'; a.timer = rand(0.5, 3); return; }
+  wander(a, 600);
+}
+
+// Die Königin zieht in ihre Kammer, sobald es eine gibt, und bleibt dort
+function queenDecide(a) {
+  const r = world.royal;
+  if (r) {
+    const inRoom = Math.abs(a.x - r.cx) < 9 && Math.abs(a.y - r.floor) < 4;
+    if (!inRoom) {
       const goal = bfs(idx(a.x, a.y), i => {
         const x = i % W, y = (i / W) | 0;
-        return Math.abs(x - tx) <= 1 && Math.abs(y - ty) <= 1;
+        return Math.abs(x - r.cx) < 4 && y === r.floor;
       }, N);
-      if (setPath(a, goal)) {
-        a.target = t;
-        reserved.set(t, a);
-        a.state = 'toDig';
-        return;
-      }
+      if (setPath(a, goal)) { a.state = 'toRoyal'; return; }
+    } else {
+      wander(a, 120);
+      return;
     }
   }
-  if (Math.random() < 0.3) {
-    a.state = 'rest';
-    a.timer = rand(0.5, 3);
-    return;
-  }
-  wander(a);
+  a.state = 'rest';
+  a.timer = rand(1, 3);
 }
 
-function wander(a) {
+function wander(a, nodes) {
   const start = idx(a.x, a.y);
-  // Ameisen oben auf der Oberfläche gehen gern zurück ins Nest.
-  if (!isUnderground(a.x, a.y) && Math.random() < 0.6) {
+  // Wer oben herumläuft, geht gern zurück ins Nest
+  if (!isUnderground(a.x, a.y) && Math.random() < 0.6 && a.caste !== 'queen') {
     const goal = bfs(start, i => {
       const x = i % W, y = (i / W) | 0;
-      return y >= world.surface[x] + 6;
+      return y >= world.surface[x] + 10;
     }, N);
     if (setPath(a, goal)) { a.state = 'wander'; return; }
   }
-  bfs(start, () => false, 600);
-  if (bfsCount > 20) {
-    setPath(a, bfsQueue[randInt(20, bfsCount - 1)]);
+  bfs(start, () => false, nodes);
+  if (bfsCount > 12) {
+    setPath(a, bfsQueue[randInt(Math.min(10, bfsCount - 1), bfsCount - 1)]);
     a.state = 'wander';
   } else {
     a.state = 'rest';
@@ -144,12 +163,12 @@ function wander(a) {
   }
 }
 
+// Sand nach oben tragen: meist nah am Eingang, selten weiter weg → Hügel
 function chooseDropColumn() {
-  // meist nah am Eingang, selten weiter weg: so entsteht ein Hügel mit Krater
   const ex = world.entranceX;
-  for (let k = 0; k < 5; k++) {
+  for (let k = 0; k < 6; k++) {
     const side = Math.random() < 0.5 ? -1 : 1;
-    const x = Math.max(3, Math.min(W - 4, ex + side * (4 + Math.floor(Math.random() * 26))));
+    const x = Math.max(3, Math.min(W - 4, ex + side * (4 + Math.floor(Math.random() * Math.random() * 40))));
     if (!isEntranceColumn(x)) return x;
   }
   return -1;
@@ -159,33 +178,32 @@ function startCarry(a) {
   a.carry = true;
   a.state = 'carry';
   a.dropX = chooseDropColumn();
-  if (a.dropX < 0) a.dropX = world.entranceX + 10;
+  if (a.dropX < 0) a.dropX = world.entranceX + 12;
   const top = columnTop(a.dropX);
   const goal = bfs(idx(a.x, a.y), i => {
     const x = i % W, y = (i / W) | 0;
     return Math.abs(x - a.dropX) <= 1 && y < top;
   }, N);
-  if (!setPath(a, goal)) {
-    // kein Weg gefunden: Korn fallen lassen und weitermachen
-    a.carry = false;
-    decide(a);
-  }
+  if (!setPath(a, goal)) { a.carry = false; decide(a); }
 }
 
 function arrive(a) {
   a.path = null;
   switch (a.state) {
-    case 'toDig':
-      if (world.cells[a.target] !== AIR &&
-          Math.abs(a.target % W - a.x) <= 1 && Math.abs(((a.target / W) | 0) - a.y) <= 1) {
-        a.dx = a.target % W - a.x;
-        a.dy = ((a.target / W) | 0) - a.y;
-        a.state = 'digging';
-        a.timer = rand(0.6, 1.2);
-      } else {
-        decide(a);
+    case 'toDig': {
+      const tip = a.tip;
+      if (tip && world.tips.includes(tip)) {
+        const [fx, fy] = tipFront(tip);
+        if (Math.hypot(a.x - fx, a.y - fy) < TUNNEL_R + 4) {
+          a.state = 'digging';
+          a.timer = rand(0.4, 0.8);
+          a.mx = fx - a.x; a.my = fy - a.y;
+          return;
+        }
       }
+      decide(a);
       break;
+    }
     case 'carry':
       a.state = 'dropping';
       a.timer = 0.3;
@@ -198,24 +216,13 @@ function arrive(a) {
 function finishTimer(a) {
   switch (a.state) {
     case 'digging': {
-      const t = a.target;
-      releaseTarget(a);
-      if (digCell(t)) {
-        // manchmal gleich eine Nachbarzelle mitnehmen
-        const tx = t % W, ty = (t / W) | 0;
-        for (let k = 0; k < 4; k++) {
-          const nx = tx + DX[k], ny = ty + DY[k];
-          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-          const j = idx(nx, ny);
-          if (world.plan[j] && world.cells[j] !== AIR && !reserved.has(j) && Math.random() < 0.5) {
-            digCell(j);
-            break;
-          }
-        }
-        startCarry(a);
-      } else {
-        decide(a);
+      const tip = a.tip;
+      let n = 0;
+      if (tip && world.tips.includes(tip)) {
+        for (let k = 0; k < 3 && world.tips.includes(tip); k++) n += digStep(tip);   // ein paar Grabschritte pro Gang
       }
+      a.tip = null;
+      if (n > 0) startCarry(a); else decide(a);
       break;
     }
     case 'dropping':
@@ -230,30 +237,40 @@ function finishTimer(a) {
 
 function replan(a) {
   a.path = null;
-  if (a.carry) startCarry(a);
-  else decide(a);
+  if (a.carry) startCarry(a); else decide(a);
 }
 
-// Körper dreht sich weich in die Blickrichtung (sonst zuckt er bei jedem Treppenschritt)
-function turnAnt(a, dt) {
-  if (a.dx === 0 && a.dy === 0) return;
-  let d = Math.atan2(a.dy, a.dx) - a.angle;
-  d = Math.atan2(Math.sin(d), Math.cos(d));
-  a.angle += d * Math.min(1, dt * 9);
+// Körper zum Boden ausrichten: Füße zeigen zur festen Seite. Umdrehen, wenn sich die Laufrichtung umkehrt.
+function orient(a, dt) {
+  let sx = 0, sy = 0;
+  for (let k = 0; k < 8; k++) {
+    if (solidAt(a.x + DX[k], a.y + DY[k])) { const l = Math.hypot(DX[k], DY[k]); sx += DX[k] / l; sy += DY[k] / l; }
+  }
+  if (sx || sy) {
+    const target = Math.atan2(sy, sx) - Math.PI / 2;
+    a.rot += angleTo(a.rot, target) * Math.min(1, dt * 10);
+  }
+  const tx = Math.cos(a.rot), ty = Math.sin(a.rot);
+  const d = a.mx * tx + a.my * ty;
+  if (Math.abs(d) > 0.3) {
+    const f = d > 0 ? 1 : -1;
+    if (f !== a.face) { a.face = f; a.turn = 0.2; }
+  }
+  if (a.turn > 0) a.turn = Math.max(0, a.turn - dt);
 }
 
 function updateAnt(a, dt) {
-  turnAnt(a, dt);
-  // Verschüttet? Dann nach oben herauskrabbeln.
+  // Verschüttet? Nach oben herauskrabbeln.
   if (world.cells[idx(a.x, a.y)] !== AIR) {
     while (a.y > 0 && world.cells[idx(a.x, a.y)] !== AIR) a.y--;
     a.t = 0;
     if (a.state !== 'digging' && a.state !== 'dropping') replan(a);
   }
+  orient(a, dt);
 
   if (a.timer > 0) {
     a.timer -= dt;
-    if (a.state === 'digging') a.walk += dt * 6;
+    if (a.state === 'digging') a.walk += dt * 10;
     if (a.timer <= 0) finishTimer(a);
     return;
   }
@@ -263,8 +280,8 @@ function updateAnt(a, dt) {
   while (step > 0 && a.path && a.pi < a.path.length) {
     const next = a.path[a.pi];
     if (world.cells[next] !== AIR) { replan(a); return; }
-    a.dx = next % W - a.x;
-    a.dy = ((next / W) | 0) - a.y;
+    a.mx = next % W - a.x;
+    a.my = ((next / W) | 0) - a.y;
     const need = 1 - a.t;
     if (step >= need) {
       a.x = next % W;
@@ -272,10 +289,10 @@ function updateAnt(a, dt) {
       a.t = 0;
       a.pi++;
       step -= need;
-      a.walk += need;
+      a.walk += need * 1.6;
     } else {
       a.t += step;
-      a.walk += step;
+      a.walk += step * 1.6;
       step = 0;
     }
   }

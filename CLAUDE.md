@@ -20,6 +20,7 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `index.html` – Seite und Canvas
 - `src/world.js` – Sandraster, Oberfläche, Tunnelplanung
 - `src/ants.js` – Ameisen: Wegfindung, Graben, Sand tragen
+- `src/sprites.js` – Ameisen-Bilder von der Seite (Laufbilder je Sorte, vorgezeichnet)
 - `src/sky.js` – Himmel, Sonne/Mond, Sterne, Wolken, Wald, Tageszeit
 - `src/render.js` – Zeichnen (Pixel-Art, ein Pixel = eine Zelle, dann hochskaliert)
 - `src/main.js` – Start, Spielschleife, Tasten, HUD

@@ -3,6 +3,7 @@
 // Himmel, Wald, Wolken und Tag/Nacht. Alles nur Optik, ohne Einfluss auf die Ameisen.
 
 const DAY_LENGTH = 300;   // Sekunden Spielzeit für einen ganzen Tag (bei Tempo 1×)
+const FOREST_SCALE = W / 320;   // mehr Bäume und Wolken in der breiteren Welt
 
 const sky = {
   time: 0.4,              // 0 = Mitternacht, 0.25 Sonnenaufgang, 0.5 Mittag, 0.75 Sonnenuntergang
@@ -53,7 +54,7 @@ function generateSky() {
     sky.stars.push({ x: randInt(0, W - 1), y: randInt(0, SURFACE_Y - 20), b: rand(0.4, 1), p: rand(0, 6.28) });
   }
   sky.clouds = [];
-  for (let k = 0; k < 6; k++) sky.clouds.push(makeCloud(rand(0, W)));
+  for (let k = 0; k < 6 * FOREST_SCALE; k++) sky.clouds.push(makeCloud(rand(0, W)));
   sky.forest = makeForest();
 }
 
@@ -81,7 +82,7 @@ function makeCloud(x) {
       }
     }
   }
-  return { img: c, x, y: rand(1, 18), speed: rand(0.8, 2.4) };
+  return { img: c, x, y: rand(Math.max(1, SURFACE_Y - 75), SURFACE_Y - 52), speed: rand(0.8, 2.4) };
 }
 
 function pix(g, col, x, y) {
@@ -113,7 +114,7 @@ function makeForest() {
   const ground = SURFACE_Y;
 
   FOREST_LAYERS.forEach((L, li) => {
-    for (let k = 0; k < L.count; k++) {
+    for (let k = 0; k < L.count * FOREST_SCALE; k++) {
       const x = rand(-6, W + 6);
       const r = rand(L.r[0], L.r[1]);
       const cy = ground - rand(L.h[0], L.h[1]);
@@ -131,7 +132,7 @@ function makeForest() {
   });
 
   // ein paar kräftig grüne Bäume ganz vorne
-  for (let k = 0; k < 3; k++) {
+  for (let k = 0; k < 3 * FOREST_SCALE; k++) {
     const x = rand(10, W - 10), r = rand(6, 9), cy = ground - rand(28, 36);
     g.fillStyle = 'rgb(104,70,50)';
     g.fillRect(Math.round(x), Math.round(cy), 2, ground - Math.round(cy));
@@ -144,7 +145,7 @@ function makeForest() {
   }
 
   // gelbe Halme im Zickzack
-  for (let k = 0; k < 14; k++) {
+  for (let k = 0; k < 14 * FOREST_SCALE; k++) {
     let x = Math.round(rand(0, W)), y = ground - 1;
     const hgt = randInt(10, 22);
     for (let s = 0; s < hgt; s++) {
@@ -154,7 +155,7 @@ function makeForest() {
   }
 
   // Pusteblumen: dünner Stiel mit weißer Kugel
-  for (let k = 0; k < 7; k++) {
+  for (let k = 0; k < 7 * FOREST_SCALE; k++) {
     const x = Math.round(rand(0, W)), hgt = randInt(9, 16);
     g.fillStyle = 'rgb(108,150,80)';
     g.fillRect(x, ground - hgt, 1, hgt);
@@ -162,7 +163,7 @@ function makeForest() {
   }
 
   // Büsche am Boden
-  for (let k = 0; k < 9; k++) {
+  for (let k = 0; k < 9 * FOREST_SCALE; k++) {
     const x = rand(0, W), r = rand(2.5, 4.5);
     fillCircle(g, x, ground - r * 0.5, r, (dx, dy) => dy < -0.4 ? [78, 154, 74] : [56, 126, 60]);
     if (Math.random() < 0.6) pix(g, [230, 236, 220], Math.round(x), Math.round(ground - r));

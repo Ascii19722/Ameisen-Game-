@@ -17,7 +17,7 @@ const MAX_DUG = (H - SURFACE_Y) * W * 0.18;   // ab hier gilt das Nest als „fe
 
 // Bauplan: nur Neigungen, keine festen Wege (siehe CLAUDE.md)
 const PLAN = {
-  wiggle: 0.22,      // zufälliges Wackeln der Grabrichtung
+  wiggle: 0.34,      // zufälliges Wackeln der Grabrichtung
   down: 0.035,       // Neigung zur Wunschrichtung
   spread: 18,        // Abstand, den neue Gänge zu bekannten Gängen halten
   chamberGap: 40,    // Mindestabstand zwischen Kammern
@@ -256,9 +256,12 @@ function bite(cx, cy, r, floorY, ax, ay, budget) {
 // Liefert false, wenn gerade kein Stück da ist (Stein im Weg oder Gang zu Ende).
 function planStep(tip) {
   let c = (Math.random() - 0.5) * PLAN.wiggle;
+  // Gänge schlängeln sich in sanften Kurven (jeder Gang mit eigenem Takt), nichts ist schnurgerade
+  if (tip.phase === undefined) tip.phase = Math.random() * 6.28;
+  if (tip.kind !== 'stub') c += Math.sin(tip.len * 0.09 + tip.phase) * 0.05 + Math.sin(tip.len * 0.023 + tip.phase * 2) * 0.03;
   const side = tip.kind === 'branch' || tip.kind === 'exit';
   const want = side ? tip.bias : Math.PI / 2;
-  if (tip.kind !== 'stub' && !tip.stuck) c += angleTo(tip.dir, want) * PLAN.down * (side ? 1.6 : 1);
+  if (tip.kind !== 'stub' && !tip.stuck) c += angleTo(tip.dir, want) * PLAN.down * (side ? 0.9 : 1);
   // Abstand zu bekannten Gängen halten
   if (tip.len > 3) {
     for (const sd of [-1, 1]) {

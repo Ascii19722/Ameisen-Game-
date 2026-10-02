@@ -232,7 +232,7 @@ function bite(cx, cy, r, floorY, ax, ay, budget) {
 function planStep(tip) {
   let c = (Math.random() - 0.5) * PLAN.wiggle;
   const want = tip.kind === 'branch' ? tip.bias : Math.PI / 2;
-  if (tip.kind !== 'stub' && !tip.stuck) c += angleTo(tip.dir, want) * PLAN.down * (tip.kind === 'branch' ? 0.6 : 1);
+  if (tip.kind !== 'stub' && !tip.stuck) c += angleTo(tip.dir, want) * PLAN.down * (tip.kind === 'branch' ? 1.6 : 1);
   // Abstand zu bekannten Gängen halten
   if (tip.len > 3) {
     for (const sd of [-1, 1]) {
@@ -376,14 +376,16 @@ const nearRoyal = p => world.royal && Math.hypot(p[0] - world.royal.cx, (p[1] - 
 
 // Neue Grabstellen nach dem Bauplan: erst tief, dann (mit größerem Nest) in die Breite
 function updatePlan(dt) {
-  if (!world.royal || world.dug >= MAX_DUG) return;
+  if (world.dug >= MAX_DUG) return;
   const nest = 1 + world.dug / 500;
   const busy = world.tips.filter(t => t.kind !== 'room').length;
   // Abzweig
-  if (busy < Math.min(2 + nest / 6, 6) && world.pts.length > 20 && Math.random() < dt * 0.4 * Math.min(1, nest / 4)) {
+  // Seitengänge gibt es schon früh, während die Königin noch nach unten gräbt (Nutzerwunsch: erst zur Seite)
+  if (busy < (world.royal ? Math.min(2 + nest / 6, 6) : 2) && world.pts.length > 20 && Math.random() < dt * 0.4 * Math.min(1, nest / 3)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];
-    if (!nearRoyal(p) && !world.branchStarts.some(b => Math.hypot(b[0] - p[0], b[1] - p[1]) < 28)) {
-      const sd = Math.random() < 0.5 ? -1 : 1, dir = p[2] + sd * rand(1.2, 1.7);   // eher waagerecht nach außen
+    if (!nearRoyal(p) && !world.branchStarts.some(b => Math.hypot(b[0] - p[0], b[1] - p[1]) < 36)) {
+      // fast waagerecht nach links oder rechts, nur leicht abwärts
+      const sd = Math.random() < 0.5 ? -1 : 1, dir = sd > 0 ? rand(0.03, 0.25) : Math.PI - rand(0.03, 0.25);
       let free = true;
       for (let dd = 6; dd <= PLAN.spread + 8; dd += 2) {
         const qx = Math.round(p[0] + Math.cos(dir) * dd), qy = Math.round(p[1] + Math.sin(dir) * dd);
@@ -392,11 +394,12 @@ function updatePlan(dt) {
       if (free) {
         world.branchStarts.push(p);
         // meist ein langer Seitengang nach außen, selten einer in die Tiefe
-        const deep = Math.random() < 0.2;
+        const deep = world.royal && Math.random() < 0.1;
         world.tips.push(newTip(p[0], p[1], dir, deep ? rand(30, 90) : rand(60, 150), deep ? 'deep' : 'branch'));
       }
     }
   }
+  if (!world.royal) return;
   // Seitenkammer über einen kurzen Stummel – nur draußen an Seitengängen, nicht am Hauptschacht
   if (world.tips.length < 2 + nest / 4 && world.pts.length > 30 && Math.random() < dt * 0.12 * Math.min(1, nest / 4)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];

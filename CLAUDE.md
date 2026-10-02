@@ -125,6 +125,8 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Feinde: Spinne (oben, frisst bis zu 3 Ameisen, zieht verletzt ab), rote Räuber (stehlen Brut).
   Ameisen wehren sich, Soldatinnen eilen herbei. Kein Game Over: die Königin ist unverwundbar.
   Tote eigene Ameisen = Abfall, tote Räuber = Futter. Feinde erst ab 40 Ameisen.
+- Nutzerwunsch: Seitengänge fast WAAGERECHT nach links/rechts (wie Etagen), schon früh (nicht erst nach der
+  Königskammer); der Schacht der Königin hat aber Vorrang.
 - Nutzerwunsch (Skizze): Kammern verteilt am ENDE langer Seitengänge (nicht direkt am Hauptschacht).
   Königin liegt still in ihrer eigenen Kammer (dort beginnen keine neuen Gänge), wird gefüttert, legt laufend
   Eier. Futterkammer gut sichtbar (größere Futterstücke) und etwa halb voll; ist der Vorrat unter 40 %,

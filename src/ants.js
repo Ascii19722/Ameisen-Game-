@@ -133,7 +133,9 @@ function decide(a) {
   // Eine Grabstelle aussuchen, an der noch Platz ist
   const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' ? 8 : t.kind === 'queen' ? 6 : 4));
   if (open.length && Math.random() < 0.85) {
-    const tip = open[randInt(0, open.length - 1)];
+    // Der Schacht der Königin hat Vorrang, bis ihre Kammer fertig ist
+    const qt = open.find(t => t.kind === 'queen');
+    const tip = qt && Math.random() < 0.7 ? qt : open[randInt(0, open.length - 1)];
     const [fx, fy] = tipFront(tip);
     const goal = bfs(idx(a.x, a.y), i => {
       const x = i % W, y = (i / W) | 0;

@@ -27,13 +27,14 @@ window.addEventListener('keydown', e => {
 function step(dt) {
   updatePlanner();
   updateAnts(dt);
+  updateSky(dt);
 }
 
 function drawHud() {
   const dpr = window.devicePixelRatio || 1;
   ctx.font = `${Math.round(13 * dpr)}px monospace`;
   ctx.fillStyle = 'rgba(255, 245, 230, 0.75)';
-  const text = `Ameisen ${ants.length} · gegraben ${world.dug} · Tempo ${speed}×` +
+  const text = `${clockText()} · Ameisen ${ants.length} · gegraben ${world.dug} · Tempo ${speed}×` +
     (paused ? ' · PAUSE' : '') + '   (Leertaste: Pause · 1–4: Tempo · F: Vollbild)';
   ctx.fillText(text, 10 * dpr, canvas.height - 10 * dpr);
 }
@@ -49,8 +50,9 @@ function frame(now) {
 }
 
 generateWorld();
+generateSky();
 spawnAnts();
 requestAnimationFrame(frame);
 
 // Für Tests in der Konsole
-window.sim = { world, ants, step, render: () => render(ctx, canvas.width, canvas.height) };
+window.sim = { world, ants, sky, step, render: () => render(ctx, canvas.width, canvas.height) };

@@ -19,6 +19,7 @@ kein Ziel, kein Game Over. Vorbild für die Optik: @ants.sim (Referenz-Frames in
 - `index.html` – Seite und Canvas
 - `src/world.js` – Sandraster, Oberfläche, Tunnelplanung
 - `src/ants.js` – Ameisen: Wegfindung, Graben, Sand tragen
+- `src/sky.js` – Himmel, Sonne/Mond, Sterne, Wolken, Wald, Tageszeit
 - `src/render.js` – Zeichnen (Pixel-Art, ein Pixel = eine Zelle, dann hochskaliert)
 - `src/main.js` – Start, Spielschleife, Tasten, HUD
 

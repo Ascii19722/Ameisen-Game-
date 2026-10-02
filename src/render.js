@@ -1,23 +1,28 @@
 'use strict';
 
 // Alles wird erst in Welt-Auflösung (W×H) gezeichnet und dann ohne Glättung hochskaliert.
-const off = document.createElement('canvas');
-off.width = W;
-off.height = H;
+// Ebenen: off = fertiges Bild, scene = Wolken/Wald/Sand/Ameisen (wird je nach Tageszeit getönt),
+// terrain = Sand und Tunnel (nur neu berechnet, wenn sich etwas geändert hat).
+function makeLayer() {
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  return c;
+}
+const off = makeLayer();
 const offCtx = off.getContext('2d');
-const terrainImage = offCtx.createImageData(W, H);
+const scene = makeLayer();
+const sceneCtx = scene.getContext('2d');
+const terrain = makeLayer();
+const terrainCtx = terrain.getContext('2d');
+const terrainImage = terrainCtx.createImageData(W, H);
 const terrainPixels = new Uint32Array(terrainImage.data.buffer);
 
 const rgba = (r, g, b) =>
   (255 << 24) | (Math.max(0, Math.min(255, b | 0)) << 16) |
   (Math.max(0, Math.min(255, g | 0)) << 8) | Math.max(0, Math.min(255, r | 0));
 
-// Himmel (Platzhalter bis Stufe 2): einfacher Verlauf
-const skyRows = new Uint32Array(H);
-for (let y = 0; y < H; y++) {
-  const k = Math.min(1, y / (H * 0.27));
-  skyRows[y] = rgba(132 + 70 * k, 190 + 38 * k, 228 + 12 * k);
-}
+const GRASS = [rgba(92, 136, 58), rgba(112, 158, 66), rgba(74, 116, 50)];
 
 function sandColor(x, y, i, loose) {
   const d = loose ? 0 : y - world.surface[x];
@@ -42,7 +47,7 @@ function redrawTerrain() {
       const cell = c[i];
       if (cell === AIR) {
         if (!isUnderground(x, y)) {
-          terrainPixels[i] = skyRows[y];
+          terrainPixels[i] = 0;   // durchsichtig: dahinter liegt der Himmel
         } else {
           // Tunnel: dunkles Braun, Boden etwas heller
           const n = (world.grain[i] - 0.5) * 10;
@@ -64,7 +69,20 @@ function redrawTerrain() {
       terrainPixels[i] = rgba(r, g, b);
     }
   }
+  drawGrass();
+  terrainCtx.putImageData(terrainImage, 0, 0);
   world.dirty = false;
+}
+
+// Grashalme auf unberührtem Boden (nicht auf dem Sandhügel)
+function drawGrass() {
+  for (let x = 0; x < W; x++) {
+    const top = world.surface[x];
+    if (columnTop(x) !== top || world.cells[idx(x, top)] !== SAND) continue;
+    const g = world.grain[idx(x, top)];
+    const h = g < 0.35 ? 0 : g < 0.75 ? 1 : g < 0.93 ? 2 : 3;
+    for (let k = 1; k <= h; k++) terrainPixels[idx(x, top - k)] = GRASS[(x + k) % 3];
+  }
 }
 
 // ---------- Ameisen-Sprites ----------
@@ -75,8 +93,8 @@ const ANT_FEEL = '#5a3a24';
 const GRAIN = '#e0bf86';
 
 function px(color, x, y) {
-  offCtx.fillStyle = color;
-  offCtx.fillRect(x, y, 1, 1);
+  sceneCtx.fillStyle = color;
+  sceneCtx.fillRect(x, y, 1, 1);
 }
 
 function drawAnt(a) {
@@ -120,8 +138,14 @@ function drawAnt(a) {
 
 function render(screenCtx, cw, ch) {
   if (world.dirty) redrawTerrain();
-  offCtx.putImageData(terrainImage, 0, 0);
+  sceneCtx.clearRect(0, 0, W, H);
+  drawSkyForeground(sceneCtx);
+  sceneCtx.drawImage(terrain, 0, 0);
   for (const a of ants) drawAnt(a);
+  applyLight(sceneCtx);
+
+  drawSkyBackground(offCtx, performance.now());
+  offCtx.drawImage(scene, 0, 0);
 
   screenCtx.fillStyle = '#140d08';
   screenCtx.fillRect(0, 0, cw, ch);

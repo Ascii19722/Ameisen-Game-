@@ -96,7 +96,14 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   (flach / hoch / Hinterleib hoch) – Auswahl und wann Seiten- vs. Draufsicht steht noch aus.
 - Ameisen drehen sich: am Gangende/bei Richtungswechsel wenden sie sichtbar (Körper wird kurz schmal
   = Drehung), an Wänden und Ecken drehen sie sich mit und klettern hoch/runter.
-- Larve: Auswahl aus L1–L8 (Bogen „Larven“, Seitenansicht, winden sich) steht noch aus.
+- Larve = L4 (gelblich, mit Ringen und kleinem Kopf, windet sich). Larven unterscheiden sich je Sorte
+  vor allem in der GRÖSSE: Pflegerin < Arbeiterin < Männchen < Soldatin < Königin-Larve.
+- Sorten unterscheiden sich im KÖRPERBAU (nach echten Ameisen):
+  Königin = größte, gewölbte Flugbrust mit Abschnitten und Flügelnarben, 3 Punktaugen, große Augen, großer Hinterleib.
+  Soldatin = groß, riesiger eckiger Kopf, Säbel-Kiefer, normale schmale Brust.
+  Arbeiterin = klein, schlank, kleiner Kopf, kleine Augen, schmale Brust. Pflegerin = noch kleiner.
+  Männchen = kleiner Kopf, sehr große Augen, Flugbrust mit Flügeln, schlanker Hinterleib.
+  Junge Königin = wie Königin, mit Flügeln.
 - Seitenansicht: Beine KURZ, Körper nah am Boden (nicht hochbeinig), kleine Schritte.
 - Laufen: deutlicher Dreifuß-Gang (je 3 Beine heben sich, schwingen nach vorne, setzen auf; die anderen
   3 schieben), Knie knicken, Füße heben sich sichtbar, Körper wippt leicht, Fühler tasten.

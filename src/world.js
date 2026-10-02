@@ -11,7 +11,7 @@ const LOOSE = 2;  // von Ameisen abgelegter, lockerer Sand
 const ROCK = 3;   // Stein, kann nicht gegraben werden
 
 const SURFACE_Y = Math.round(H * 0.3);
-const TUNNEL_RADIUS = 1.2;      // Gänge sind 2–3 Zellen breit
+const TUNNEL_RADIUS = 1.8;      // Gänge sind 3–4 Zellen breit, passend zur Ameisengröße
 const MAX_DUG = N * 0.12;       // irgendwann ist das Nest "fertig"
 
 const world = {
@@ -241,7 +241,7 @@ function planEntrance() {
 }
 
 function planChamber(ex, ey, prio) {
-  const rx = rand(4, 6.5), ry = rand(3, 4.2);
+  const rx = rand(5, 8), ry = rand(3.6, 5);
   const cx = ex + rand(-1.5, 1.5);
   const cy = ey + rand(-1, 1);
   if (!inDigArea(cx - rx, cy - ry) || !inDigArea(cx + rx, cy + ry)) return false;
@@ -272,7 +272,7 @@ function extendTrunk() {
     // erst schräg wie im Vorbild, bei Hindernissen auch steiler
     const lean = attempt < 8 ? rand(0.55, 0.95) : rand(0.1, 1.1);
     const a = Math.PI / 2 - dir * lean;
-    const pts = tracePath(t.x, t.y, a, rand(14, 26), 0.05, 5);
+    const pts = tracePath(t.x, t.y, a, rand(14, 26), 0.05, 6);
     if (pts.length < (attempt < 8 ? 12 : 8)) continue;
     const prio = world.nextPrio++;
     markPath(pts, prio, true);
@@ -304,7 +304,7 @@ function addBranch() {
     if (t && !t.done && Math.hypot(n.x - t.x, n.y - t.y) < 14) continue;
     const side = Math.random() < 0.5 ? -1 : 1;
     const a = side > 0 ? rand(-0.45, 0.5) : Math.PI - rand(-0.45, 0.5);
-    const pts = tracePath(n.x, n.y, a, rand(8, 18), 0.07, 8);
+    const pts = tracePath(n.x, n.y, a, rand(8, 18), 0.07, 9);
     if (pts.length < 12) continue;
     const prio = world.nextPrio++;
     // Abzweigpunkte in der Nähe verbrauchen, damit Seitengänge nicht dicht nebeneinander starten

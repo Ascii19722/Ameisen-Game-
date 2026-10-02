@@ -61,7 +61,8 @@ function createAnt(x, y) {
     x, y,               // aktuelle Zelle
     path: null, pi: 0,  // Weg und Position darin
     t: 0,               // Fortschritt zur nächsten Zelle (0..1)
-    dx: 1, dy: 0,       // Blickrichtung
+    dx: 1, dy: 0,       // Blickrichtung (Zellen-Schritt)
+    angle: rand(-Math.PI, Math.PI), // Drehung beim Zeichnen, folgt der Blickrichtung weich
     speed: rand(6, 9),  // Zellen pro Sekunde
     state: 'rest',
     timer: rand(0, 3),
@@ -233,7 +234,16 @@ function replan(a) {
   else decide(a);
 }
 
+// Körper dreht sich weich in die Blickrichtung (sonst zuckt er bei jedem Treppenschritt)
+function turnAnt(a, dt) {
+  if (a.dx === 0 && a.dy === 0) return;
+  let d = Math.atan2(a.dy, a.dx) - a.angle;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  a.angle += d * Math.min(1, dt * 9);
+}
+
 function updateAnt(a, dt) {
+  turnAnt(a, dt);
   // Verschüttet? Dann nach oben herauskrabbeln.
   if (world.cells[idx(a.x, a.y)] !== AIR) {
     while (a.y > 0 && world.cells[idx(a.x, a.y)] !== AIR) a.y--;

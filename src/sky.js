@@ -239,11 +239,11 @@ function drawSkyForeground(g) {
 }
 
 // Tageslicht über alles legen, was schon auf g gezeichnet ist (nicht über den Himmel).
-function applyLight(g) {
+function applyLight(g, w, h) {
   const l = skyColors(sky.time).light;
   if (l[3] <= 0.005) return;
   g.globalCompositeOperation = 'source-atop';
   g.fillStyle = `rgba(${l[0] | 0},${l[1] | 0},${l[2] | 0},${l[3].toFixed(3)})`;
-  g.fillRect(0, 0, W, H);
+  g.fillRect(0, 0, w, h);
   g.globalCompositeOperation = 'source-over';
 }

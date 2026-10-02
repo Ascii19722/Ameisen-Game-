@@ -73,6 +73,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
     halten ist erlaubt, Wissen über Unbekanntes im Boden nicht.
   * Manche neuen Gänge suchen die Tiefe; gibt ein Gang auf, versucht es später eine andere Ameise woanders.
   Vorschau: Bogen „Ohne Röntgenblick“ (Nest A/B im Zeitraffer).
+- Steine: WENIGE (ca. 10–15 im Nestbereich, verschiedene Größen), so wie im ants.sim-Video.
+- Kammer-Aufgaben (wie in echten Nestern): Königin, Eier, Larven, Puppen (Kokons), Vorrat (Samen/Futter),
+  Abfall (weit weg, abseits), Winterkammer (ganz tief), leere Reserve. Brut wird je nach Wärme hoch/runter
+  getragen (oben warm am Tag, unten bei Kälte/Nacht).
   Später ggf. ergänzen: Kammern dort, wo Brut abgelegt wird (echte Ameisen).
 - Kammern NICHT dicht aneinander: wie im ants.sim-Video klein und rund (ca. 3–4× Gangbreite),
   zwischen zwei Kammern mindestens eine Kammerbreite Sand (Mindestabstand), Kammern am Ende von

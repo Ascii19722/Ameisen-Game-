@@ -89,10 +89,14 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   Hauptgang ca. 1 Ameise breit, Seitengänge etwas schmaler; Äste 4–9 Ameisenlängen; ganzes Nest ca.
   45–50 Ameisenlängen tief (lang gezogen). Favoriten: Bogen „Proportionen“ Nr. 1–3 (wie 3 und 4).
   Folge: Das Nest ist dann ca. 300 Welt-Pixel tief – größer als der jetzige Bildschirm (320×180).
-  Die Welt muss also größer werden (Kamera mit Scrollen/Zoomen) oder die Ameisen kleiner.
+  ENTSCHIEDEN: Die Welt wird größer, mit Kamera zum Scrollen und Zoomen (rein- und rauszoomen),
+  kommt mit Stufe 3 (zieht diesen Teil von Stufe 7 vor).
 - Seitenansicht: Ameisen gibt es auch von der Seite (Querschnitt = wir schauen seitlich ins Nest).
   Seiten-Modell für Königin (R13), Arbeiterin (A11), Soldatin (S17), Pflegerin (P7), 3 Haltungen
   (flach / hoch / Hinterleib hoch) – Auswahl und wann Seiten- vs. Draufsicht steht noch aus.
+- Ameisen drehen sich: am Gangende/bei Richtungswechsel wenden sie sichtbar (Körper wird kurz schmal
+  = Drehung), an Wänden und Ecken drehen sie sich mit und klettern hoch/runter.
+- Larve: Auswahl aus L1–L8 (Bogen „Larven“, Seitenansicht, winden sich) steht noch aus.
 - Seitenansicht: Beine KURZ, Körper nah am Boden (nicht hochbeinig), kleine Schritte.
 - Laufen: deutlicher Dreifuß-Gang (je 3 Beine heben sich, schwingen nach vorne, setzen auf; die anderen
   3 schieben), Knie knicken, Füße heben sich sichtbar, Körper wippt leicht, Fühler tasten.

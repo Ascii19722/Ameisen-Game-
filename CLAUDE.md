@@ -49,7 +49,9 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Gang-Stil = G31 (ants.sim-Form, halbdurchsichtiges Braun, Ameisen-Laufspur, Sandkrümel, BRÖCKLIGER Rand
   mit ausgebrochenen Stücken). Gänge größer (ca. 4 Pixel), Kammern größer (ca. 1,4×) und klar umrissen.
   WICHTIG: nichts perfekt rund – Kammern schief und beulig, Boden leicht krumm, Gangbreite schwankt
-  (gegraben hat immer Macken). Genaue Variante aus dem Bogen „G31 unregelmäßig“ steht noch aus.
+  (gegraben hat immer Macken). Stil wie „G31 unregelmäßig G9“ (mit Brut am Boden) gefällt.
+  Gänge sollen LANG sein: Seitengänge laufen weit hinaus, bevor sie in eine Kammer münden;
+  Hauptgang windet sich in Bögen nach unten. Variante L1–L6 (Abzweige/Schleifen) steht noch aus.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

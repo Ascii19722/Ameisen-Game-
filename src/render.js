@@ -174,14 +174,14 @@ const itemScale = it => {
 // Brut und Futter, die am Boden liegen
 function drawItems(g, cam, cw, ch, now) {
   const s = cam.zoom, k = s / SPRITE_RES;
-  for (const list of [colony.food, colony.brood]) {
+  for (const list of [colony.waste, colony.food, colony.prey, colony.brood]) {
     for (const it of list) {
       if (it.by) continue;
-      const sc = itemScale(it), size = ITEM_SPR * k * sc;
+      const img = itemImage(it, now), sc = itemScale(it), size = img.width * k * sc;
       const sx = (it.x + 0.5 - cam.x) * s + cw / 2;
       const sy = (it.y + 1 - cam.y) * s + ch / 2 - ITEM_HALF[it.kind] * ITEM_SCALE * k * sc;
       if (sx < -40 || sy < -40 || sx > cw + 40 || sy > ch + 40) continue;
-      g.drawImage(itemImage(it, now), sx - size / 2, sy - size / 2, size, size);
+      g.drawImage(img, sx - size / 2, sy - size / 2, size, size);
     }
   }
 }

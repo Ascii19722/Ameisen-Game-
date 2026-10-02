@@ -201,6 +201,7 @@ buildSideSprites();
 // ---------- Brut und Futter ----------
 // Kleine Bilder, Mitte bei (ITEM_SPR/2, ITEM_SPR/2), gleicher Maßstab wie eine Arbeiterin.
 const ITEM_SPR = 32;
+const PREY_SCALE = 2.4;
 const ITEM_SCALE = SPRITE_RES * 1.4;
 const BC = {
   cream: [244, 232, 200], creamD: [214, 198, 160], white: [255, 252, 240],
@@ -209,9 +210,12 @@ const BC = {
   leaf: [92, 150, 60], leafD: [56, 104, 40], leafL: [150, 196, 96],
   petal: [236, 130, 160], petalL: [252, 196, 210],
   seed: [140, 96, 52], seedL: [196, 150, 96],
+  meat: [150, 84, 60], meatL: [196, 128, 96], crumb: [110, 92, 70], crumbL: [146, 126, 100],
+  beetle: [38, 44, 52], beetleL: [92, 110, 128], beetleLeg: [30, 28, 30],
+  hopper: [110, 150, 60], hopperD: [74, 110, 40], hopperL: [168, 198, 100],
 };
 // Halbe Höhe in Einheiten: damit liegt das Ding mit der Unterseite auf dem Boden
-const ITEM_HALF = { egg: 0.3, larva: 0.42, cocoon: 0.62, leaf: 0.3, petal: 0.28, seed: 0.28 };
+const ITEM_HALF = { egg: 0.3, larva: 0.42, cocoon: 0.62, leaf: 0.3, petal: 0.28, seed: 0.28, meat: 0.3, crumb: 0.22, shell: 0.45, beetle: 0.72 * PREY_SCALE, grasshopper: 0.52 * PREY_SCALE };
 
 function drawLarva(g, ph) {   // Stil L4: gelblich, Ringe, kleiner Kopf, windet sich
   const n = 7, bend = 0.35 + Math.sin(ph) * 0.35, head = Math.sin(ph * 1.7) * 0.3, k = 1.1, segL = 1.1 * 2 * k / n;
@@ -257,25 +261,65 @@ const ITEM_DRAW = {
     g.fillStyle = rgbCss(BC.petal); sPoly(g, sEll(0, 0, 0.55, 0.28, -0.2));
     g.fillStyle = rgbCss(BC.petalL); sPoly(g, sEll(-0.12, -0.08, 0.25, 0.1, -0.2, 8));
   },
+  meat: g => {   // Stück von einem Insekt
+    g.fillStyle = rgbCss(BC.meat); sPoly(g, [-0.5, 0.25, -0.4, -0.2, 0.1, -0.32, 0.5, -0.1, 0.45, 0.28]);
+    g.fillStyle = rgbCss(BC.meatL); sPoly(g, sEll(-0.1, -0.1, 0.2, 0.08, 0, 8));
+  },
+  crumb: g => {   // Essensreste (Abfall)
+    g.fillStyle = rgbCss(BC.crumb); sPoly(g, [-0.35, 0.2, -0.25, -0.15, 0.15, -0.22, 0.38, 0.05, 0.2, 0.22]);
+    g.fillStyle = rgbCss(BC.crumbL); sPoly(g, sEll(-0.05, -0.05, 0.1, 0.06, 0, 6));
+  },
+  shell: g => {   // leere, aufgerissene Kokonhülle
+    g.fillStyle = rgbCss(BC.cocD);
+    sPoly(g, [-0.9, 0.4, -0.95, 0, -0.6, -0.35, 0, -0.42, 0.3, -0.3, 0.1, 0, 0.5, 0.05, 0.8, 0.4]);
+    g.fillStyle = rgbCss(BC.coc); sPoly(g, [-0.7, 0, -0.5, -0.25, 0, -0.32, 0.15, -0.2, -0.2, -0.05]);
+  },
   seed: g => {   // Samenkorn
     g.fillStyle = rgbCss(BC.seed); sPoly(g, sEll(0, 0, 0.45, 0.28, 0.3));
     g.fillStyle = rgbCss(BC.seedL); sPoly(g, sEll(-0.12, -0.1, 0.18, 0.08, 0.3, 8));
   },
 };
 
+// Toter Käfer auf dem Rücken, Beine nach oben
+function drawBeetle(g) {
+  g.strokeStyle = rgbCss(BC.beetleLeg);
+  g.lineWidth = 0.14;
+  for (const x of [-0.6, 0, 0.6]) sLine(g, [x, -0.3, x + 0.25, -0.9, x + 0.1, -1.2]);
+  g.fillStyle = rgbCss(BC.beetle);
+  sPoly(g, sEll(0, 0, 1.4, 0.7, 0, 18));
+  sPoly(g, sEll(1.45, 0.15, 0.4, 0.35, 0, 10));
+  g.fillStyle = rgbCss(BC.beetleL);
+  sPoly(g, sEll(-0.3, 0.3, 0.7, 0.15, 0, 10));
+}
+// Toter Grashüpfer auf der Seite
+function drawHopper(g) {
+  g.fillStyle = rgbCss(BC.hopperD);
+  sPoly(g, [-0.6, 0, 0.6, -0.9, 1.0, -0.8, 0.0, 0.1]);       // großes Sprungbein
+  g.fillStyle = rgbCss(BC.hopper);
+  sPoly(g, sEll(-0.3, 0.1, 1.9, 0.42, 0, 18));
+  sPoly(g, sEll(1.7, -0.05, 0.42, 0.4, 0, 10));
+  g.fillStyle = rgbCss(BC.hopperL);
+  sPoly(g, sEll(-0.5, -0.1, 1.2, 0.12, 0, 10));
+  g.fillStyle = rgbCss(C.eye);
+  sPoly(g, sEll(1.85, -0.12, 0.1, 0.1, 0, 6));
+  g.strokeStyle = rgbCss(BC.hopperD);
+  g.lineWidth = 0.08;
+  sLine(g, [2.0, -0.3, 2.6, -1.0]);
+}
+
 const itemSprites = {};   // itemSprites[kind][frame]
 function buildItemSprites() {
-  const palette = Object.values(BC);
-  const make = fn => {
+  const palette = [...Object.values(BC), C.eye];
+  const make = (fn, size = ITEM_SPR) => {
     const cv = document.createElement('canvas');
-    cv.width = ITEM_SPR;
-    cv.height = ITEM_SPR;
+    cv.width = size;
+    cv.height = size;
     const g = cv.getContext('2d', { willReadFrequently: true });
-    g.translate(ITEM_SPR / 2, ITEM_SPR / 2);
+    g.translate(size / 2, size / 2);
     g.scale(ITEM_SCALE, ITEM_SCALE);
     fn(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    const img = g.getImageData(0, 0, ITEM_SPR, ITEM_SPR), d = img.data;
+    const img = g.getImageData(0, 0, size, size), d = img.data;
     for (let i = 0; i < d.length; i += 4) {
       if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
       let best = palette[0], bd = Infinity;
@@ -289,6 +333,9 @@ function buildItemSprites() {
     return cv;
   };
   for (const [kind, fn] of Object.entries(ITEM_DRAW)) itemSprites[kind] = [make(fn)];
+  // Beute ist viel größer als eine Ameise
+  itemSprites.beetle = [make(g => { g.scale(PREY_SCALE, PREY_SCALE); drawBeetle(g); }, 96)];
+  itemSprites.grasshopper = [make(g => { g.scale(PREY_SCALE, PREY_SCALE); drawHopper(g); }, 96)];
   itemSprites.larva = [];
   for (let f = 0; f < 6; f++) itemSprites.larva.push(make(g => drawLarva(g, f / 6 * Math.PI * 2)));
 }

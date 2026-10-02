@@ -166,6 +166,7 @@ function queenDecide(a) {
 // Soldatin: bewacht den Eingang, läuft oben und im oberen Gang Streife
 function soldierDecide(a) {
   const ex = world.entranceX;
+  if (Math.random() < 0.6 && colonyTask(a)) return;   // schwere Beute mittragen
   if (Math.random() < 0.5) {
     const tx = ex + randInt(-25, 25), top = columnTop(tx);
     const goal = bfs(idx(a.x, a.y), i => {
@@ -314,6 +315,7 @@ function updateAnt(a, dt) {
     return;
   }
   orient(a, dt);
+  if (a.state === 'haul') return;   // trägt mit anderen eine Beute (Bewegung in colony.js)
 
   if (a.timer > 0) {
     a.timer -= dt;

@@ -19,7 +19,7 @@ Tasten:
 | 3a | Große Welt mit Zoom, Ameisen von der Seite, Graben nach Bauplan, Sandhügel | fertig |
 | 3b | Königin legt Eier → Larven → Puppen → neue Ameisen, Futter holen, Kammer-Aufgaben | fertig |
 | 3c | Soldatinnen, Pflegerinnen, HUD mit echten Zahlen, Speichern, "Neue Kolonie" | fertig |
-| 4 | Futtersuche ausbauen (Grundlage steht), Abfallkammer, Brut nach Wärme, Zeitsteuerung | offen |
+| 4 | Beute gemeinsam tragen, Abfallkammer/Abfallhaufen, Brut nach Wärme, Zeitknöpfe | fertig |
 | 5 | Feinde und Kampf | offen |
 | 6 | Ambient-Sound | offen |
 | 7 | Größere Welt, .exe | offen |
@@ -80,9 +80,9 @@ Tasten:
 4. Zwei große Sandhaufen links und rechts vom Eingang wachsen mit dem Nest.
 
 ## Prompt für die nächste Stufe
-> Lies CLAUDE.md und START.md. Baue Stufe 4: Futter holen gibt es schon (colony.js). Jetzt
-> Zeitsteuerung ausbauen, mehr Futterarten (z. B. tote Insekten, die mehrere Ameisen tragen),
-> Abfallkammer, Brut je nach Wärme hoch/runter tragen. Danach START.md aktualisieren, committen, pushen.
+> Lies CLAUDE.md und START.md. Baue Stufe 5: Feinde und Kampf (z. B. fremde Ameisen oder Spinnen
+> an der Oberfläche, Soldatinnen verteidigen den Eingang). Kein Game Over – die Kolonie erholt sich.
+> Danach START.md aktualisieren, committen, pushen.
 
 ## Noch zu tun (außerhalb des Codes)
 - Referenz-Frames nach `referenz/` legen (hilft beim Feinschliff).

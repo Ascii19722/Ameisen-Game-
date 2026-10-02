@@ -2,7 +2,7 @@
 
 const canvas = document.getElementById('screen');
 const ctx = canvas.getContext('2d');
-const SPEEDS = [1, 2, 4, 8];
+const SPEEDS = [1, 2, 4, 8, 16];
 let speed = 1;
 let paused = false;
 const cam = { x: 0, y: 0, zoom: 1 };   // Kamera: Mittelpunkt in Welt-Pixeln und Zoom
@@ -107,7 +107,13 @@ function drawHud() {
   const x = Math.round(24 * u), y = Math.round(24 * u);
   const big = `${ants.length} AMEISEN · ${broodCount()} BRUT · ${foodCount()} FUTTER`;
   ctx.font = `700 ${Math.round(26 * u)}px system-ui, sans-serif`;
-  const w = Math.max(ctx.measureText(big).width + 40 * u, 560 * u), h = 92 * u;
+  const nS = ants.filter(a => a.caste === 'soldier').length, nP = ants.filter(a => a.caste === 'nurse').length;
+  const small = `KOLONIE · ${nS} SOLDATINNEN · ${nP} PFLEGERINNEN`;
+  const clock = `Tag ${sky.day} · ${clockText()}${paused ? ' · Pause' : ''}${speed > 1 ? ' · ' + speed + '×' : ''}`;
+  const bigW = ctx.measureText(big).width;
+  ctx.font = `600 ${Math.round(15 * u)}px system-ui, sans-serif`;
+  const smallW = ctx.measureText(small + '    ' + clock).width;
+  const w = Math.max(bigW, smallW) + 40 * u, h = 92 * u;
 
   ctx.fillStyle = 'rgba(240, 233, 220, 0.94)';
   roundRect(x, y, w, h, 10 * u);
@@ -120,10 +126,9 @@ function drawHud() {
   ctx.fillStyle = '#7a6a5a';
   ctx.font = `600 ${Math.round(15 * u)}px system-ui, sans-serif`;
   ctx.textAlign = 'left';
-  const nS = ants.filter(a => a.caste === 'soldier').length, nP = ants.filter(a => a.caste === 'nurse').length;
-  ctx.fillText(`KOLONIE · ${nS} SOLDATINNEN · ${nP} PFLEGERINNEN`, x + 20 * u, y + 28 * u);
+  ctx.fillText(small, x + 20 * u, y + 28 * u);
   ctx.textAlign = 'right';
-  ctx.fillText(`Tag ${sky.day} · ${clockText()}${paused ? ' · Pause' : ''}${speed > 1 ? ' · ' + speed + '×' : ''}`,
+  ctx.fillText(clock,
     x + w - 20 * u, y + 28 * u);
 
   ctx.textAlign = 'left';
@@ -141,7 +146,7 @@ function drawHud() {
   // Tastenhilfe klein unten links
   ctx.font = `${Math.round(13 * u)}px system-ui, sans-serif`;
   ctx.fillStyle = 'rgba(60, 45, 35, 0.6)';
-  ctx.fillText('Mausrad/+−: Zoom · Ziehen/Pfeile/WASD: verschieben · 0: zurück · N: neue Kolonie · Leertaste: Pause · 1–4: Tempo · F: Vollbild',
+  ctx.fillText('Mausrad/+−: Zoom · Ziehen/Pfeile/WASD: verschieben · 0: zurück · N: neue Kolonie · Leertaste: Pause · 1–5: Tempo · F: Vollbild',
     16 * u, canvas.height - 14 * u);
 }
 
@@ -153,6 +158,7 @@ function frame(now) {
   moveCam(dt);
   render(ctx, canvas.width, canvas.height, cam);
   drawHud();
+  updateTempoButtons();
   requestAnimationFrame(frame);
 }
 
@@ -162,6 +168,21 @@ function askNewColony() {
   newColony();
   resetCam();
 }
+// Zeitknöpfe: Pause und Tempo; der aktive Knopf ist hervorgehoben
+const tempoButtons = document.querySelectorAll('#tempo button');
+tempoButtons.forEach(b => b.addEventListener('click', () => {
+  const v = +b.dataset.s;
+  if (v === 0) paused = !paused;
+  else { speed = v; paused = false; }
+  b.blur();
+}));
+function updateTempoButtons() {
+  tempoButtons.forEach(b => {
+    const v = +b.dataset.s;
+    b.classList.toggle('an', v === 0 ? paused : !paused && v === speed);
+  });
+}
+
 document.getElementById('neu').addEventListener('click', e => { e.currentTarget.blur(); askNewColony(); });
 
 // Start: gespeicherte Kolonie laden, sonst eine neue gründen

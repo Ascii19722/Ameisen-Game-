@@ -25,6 +25,7 @@ function itemData(it) {
   const d = { kind: it.kind, x: carrier ? carrier.x : it.x, y: carrier ? carrier.y : it.y, lvl: carrier ? 0 : it.lvl,
     room: carrier || !it.room ? -1 : world.chambers.indexOf(it.room) };
   if (it.caste) d.caste = it.caste;
+  if (it.dumped) d.dumped = true;
   if (it.age !== undefined) { d.age = it.age; d.fed = it.fed; d.lastFed = it.lastFed; d.ph = it.ph; }
   return d;
 }
@@ -46,6 +47,8 @@ function saveGame() {
       ants: ants.map(a => ({ x: a.x, y: a.y, caste: a.caste, speed: a.speed })),
       colony: {
         food: food.map(itemData), brood: colony.brood.map(itemData), sources: colony.sources,
+        waste: colony.waste.map(itemData), dumpX: colony.dumpX, preyTimer: colony.preyTimer,
+        prey: colony.prey.map(p => ({ x: p.x, y: p.y, kind: p.kind, need: p.need, portions: p.portions })),
         queenFood: colony.queenFood, eatTimer: colony.eatTimer, layTimer: colony.layTimer,
       },
       sky: { time: sky.time, day: sky.day },
@@ -87,8 +90,12 @@ function loadGame() {
   const c = data.colony;
   colony.food = c.food.map(item);
   colony.brood = c.brood.map(item);
+  colony.waste = (c.waste || []).map(item);
+  colony.prey = (c.prey || []).map(p => ({ ...p, carriers: [], moving: false, wait: 0 }));
+  colony.dumpX = c.dumpX || world.entranceX + 70;
+  colony.preyTimer = c.preyTimer || 60;
   // Lose Dinge fallen auf den Boden
-  for (const it of colony.food.concat(colony.brood)) if (!it.room) dropLoose(it, it.x, Math.round(it.y));
+  for (const it of colony.food.concat(colony.brood, colony.waste)) if (!it.room) { const dumped = it.dumped; dropLoose(it, it.x, Math.round(it.y)); it.dumped = dumped; }
   colony.sources = c.sources;
   colony.queenFood = c.queenFood;
   colony.eatTimer = c.eatTimer;

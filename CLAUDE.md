@@ -114,6 +114,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   (Krümel für Krümel, nie aus dem Nichts). Ameisen ohne Halt fallen herunter.
 - Futter: Pflanzen an der Oberfläche (Blätter, Blüten, Samen) → Vorratskammer → Königin und Larven.
   Die Königin isst ständig; ist sie satt, legt sie Eier. Brut wird in ihre Kammer getragen.
+- Beute: tote Insekten (Käfer, Grashüpfer) liegen an der Oberfläche, mehrere Ameisen tragen sie zum
+  Eingang, dort wird sie in Stücke zerlegt. Abfall (Reste, Kokonhüllen) kommt in die Abfallkammer
+  (abseits) oder, solange es keine gibt, auf den Abfallhaufen draußen. Brut: tagsüber in die obere,
+  nachts in die untere Larven-/Puppenkammer.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

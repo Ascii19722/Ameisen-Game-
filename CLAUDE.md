@@ -71,6 +71,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
     endet der Gang dort. Kammern werden um Steine herum gegraben (Stein bleibt stehen).
   * Eigene Gänge kennen die Ameisen (sie laufen darin herum, Ortssinn) – Abstand zu bekannten Gängen
     halten ist erlaubt, Wissen über Unbekanntes im Boden nicht.
+  * ERST IN DIE TIEFE, DANN IN DIE BREITE: Die Königin gräbt zuerst einen langen Schacht weit nach unten;
+    Abzweige zur Seite kommen erst mit wachsender Kolonie. Die Königskammer liegt möglichst TIEF
+    (die Königin zieht mit nach unten, wenn das Nest tiefer wird). Ausgegrabener Sand wird nach oben
+    getragen und bildet einen Sandhügel am Eingang, der mit dem Nest wächst.
   * Manche neuen Gänge suchen die Tiefe; gibt ein Gang auf, versucht es später eine andere Ameise woanders.
   Vorschau: Bogen „Ohne Röntgenblick“ (Nest A/B im Zeitraffer).
 - Steine: WENIGE (ca. 10–15 im Nestbereich, verschiedene Größen), so wie im ants.sim-Video.
@@ -89,6 +93,7 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Seitenansicht: Ameisen gibt es auch von der Seite (Querschnitt = wir schauen seitlich ins Nest).
   Seiten-Modell für Königin (R13), Arbeiterin (A11), Soldatin (S17), Pflegerin (P7), 3 Haltungen
   (flach / hoch / Hinterleib hoch) – Auswahl und wann Seiten- vs. Draufsicht steht noch aus.
+- Seitenansicht: Beine KURZ, Körper nah am Boden (nicht hochbeinig), kleine Schritte.
 - Laufen: deutlicher Dreifuß-Gang (je 3 Beine heben sich, schwingen nach vorne, setzen auf; die anderen
   3 schieben), Knie knicken, Füße heben sich sichtbar, Körper wippt leicht, Fühler tasten.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.

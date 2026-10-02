@@ -31,6 +31,12 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Look wie @ants.sim: Bodenschichten mit Sprenkeln, Steine, braune Gänge, runde Kammern,
   lila-oranger Himmel, runder Wald, helle Info-Karte. Farben stehen in `render.js` und `sky.js`.
 
+## Ameisen-Design (vom Nutzer ausgewählt)
+- Ameisen von oben, eckig, Pixel-Art mit harten Kanten (Posen werden vorgezeichnet, `render.js`).
+- Arbeiterin = Design Nr. 4: schwarz, feine Pixel (ANT_RES 4), Größe 1.4.
+- Königin, Soldatin usw.: Vorschläge gezeigt, Auswahl steht noch aus.
+- Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
+
 ## Arbeitsweise
 - In Stufen bauen (siehe START.md). Pro Stufe nur das, was dazugehört.
 - Kleine, saubere Commits. Nach jeder Stufe muss das Spiel lauffähig sein.

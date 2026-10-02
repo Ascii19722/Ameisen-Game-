@@ -105,11 +105,11 @@ function redrawTerrain() {
 // Hinterleib, Beine und Fühler erkennt. Gezeichnet von oben, eckig, als Pixel-Art.
 // Jede Pose (16 Richtungen × 4 Laufbilder × mit/ohne Sandkorn) wird beim Start einmal
 // vorgezeichnet; danach wird nur noch kopiert. Das bleibt auch bei 1000 Ameisen schnell.
-const ANT_RES = 3;      // bei Full-HD ist ein Ameisen-Pixel 2×2 Bildschirm-Pixel groß
+const ANT_RES = 4;      // feine Pixel (Design Nr. 4): bei Full-HD 1,5 Bildschirm-Pixel pro Ameisen-Pixel
 const ANT_SIZE = 1.4;   // Größe der Ameise in Welt-Pixeln (Faktor)
 const ANT_DIRS = 16;
 const ANT_FRAMES = 4;
-const SPRITE = 28;      // Kantenlänge eines Posen-Bildes in Ameisen-Pixeln
+const SPRITE = 38;      // Kantenlänge eines Posen-Bildes in Ameisen-Pixeln
 const antLayer = document.createElement('canvas');
 antLayer.width = W * ANT_RES;
 antLayer.height = H * ANT_RES;

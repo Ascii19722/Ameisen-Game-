@@ -22,21 +22,18 @@ const rgba = (r, g, b) =>
   (255 << 24) | (Math.max(0, Math.min(255, b | 0)) << 16) |
   (Math.max(0, Math.min(255, g | 0)) << 8) | Math.max(0, Math.min(255, r | 0));
 
-const GRASS = [rgba(92, 136, 58), rgba(112, 158, 66), rgba(74, 116, 50)];
+// Bodenschichten wie im Vorbild: [Grundfarbe, heller Sprenkel]
+const LAYER_COLORS = [
+  [[186, 156, 122], [212, 186, 152]],   // Humus
+  [[224, 198, 154], [238, 218, 180]],   // Sand
+  [[206, 142, 106], [228, 172, 138]],   // Lehm
+  [[178, 166, 140], [198, 188, 164]],   // grauer Untergrund
+];
+const TUNNEL_BROWN = [124, 86, 56];
+const LOOSE_COLOR = [228, 214, 180];
 
-function sandColor(x, y, i, loose) {
-  const d = loose ? 0 : y - world.surface[x];
-  const k = Math.min(1, d / 130);
-  const g = world.grain[i];
-  // Grundfarbe: oben heller, tiefer dunkler, dazu leichte Schichten
-  let r = 224 - 50 * k, gg = 184 - 50 * k, b = 124 - 40 * k;
-  const band = Math.sin(y * 0.33 + Math.sin(x * 0.04) * 1.5) * 5;
-  const n = (g - 0.5) * 16 + band;
-  r += n; gg += n; b += n * 0.7;
-  if (loose) { r += 6; gg += 6; b += 4; }
-  if (g > 0.985) { r -= 38; gg -= 36; b -= 28; }        // dunkle Körner
-  else if (g < 0.012) { r += 22; gg += 22; b += 20; }   // helle Körner
-  return [r, gg, b];
+function cellIsRock(x, y) {
+  return x >= 0 && y >= 0 && x < W && y < H && world.cells[y * W + x] === ROCK;
 }
 
 function redrawTerrain() {
@@ -45,44 +42,62 @@ function redrawTerrain() {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
       const cell = c[i];
+      const g = world.grain[i];
+
       if (cell === AIR) {
-        if (!isUnderground(x, y)) {
-          terrainPixels[i] = 0;   // durchsichtig: dahinter liegt der Himmel
+        if (!isUnderground(x, y)) { terrainPixels[i] = 0; continue; }  // Himmel scheint durch
+        // Gang: braun, leicht in der Farbe der Schicht; am Rand etwas heller
+        const base = LAYER_COLORS[layerOf(x, y)][0];
+        let edge = false;
+        for (let k = 0; k < 4; k++) if (solidAt(x + DX[k], y + DY[k])) edge = true;
+        const m = edge ? 0.42 : 0.25;
+        const n = (g - 0.5) * 6;
+        terrainPixels[i] = rgba(
+          lerp(TUNNEL_BROWN[0], base[0] * 0.8, m) + n,
+          lerp(TUNNEL_BROWN[1], base[1] * 0.8, m) + n,
+          lerp(TUNNEL_BROWN[2], base[2] * 0.8, m) + n);
+        continue;
+      }
+
+      if (cell === ROCK) {
+        // grauer Stein mit gepunktetem dunklem Rand
+        let rim = false;
+        for (let k = 0; k < 4; k++) if (!cellIsRock(x + DX[k], y + DY[k])) rim = true;
+        if (rim) {
+          terrainPixels[i] = (x + y) % 2 ? rgba(72, 68, 70) : rgba(112, 110, 114);
         } else {
-          // Tunnel: dunkles Braun, Boden etwas heller
-          const n = (world.grain[i] - 0.5) * 10;
-          const floor = solidAt(x, y + 1) ? 10 : 0;
-          terrainPixels[i] = rgba(112 + n + floor, 77 + n + floor, 47 + n * 0.7 + floor * 0.6);
+          const hi = !cellIsRock(x - 1, y - 1) || !cellIsRock(x - 2, y - 2) ? 22 : 0;
+          const n = (g - 0.5) * 22 + hi;
+          terrainPixels[i] = rgba(128 + n, 130 + n, 136 + n);
         }
         continue;
       }
-      let [r, g, b] = sandColor(x, y, i, cell === LOOSE);
-      // Rand zu Tunneln abdunkeln, Kante zum Himmel aufhellen
-      let rim = false, sky = false;
-      for (let k = 0; k < 4; k++) {
-        const nx = x + DX[k], ny = y + DY[k];
-        if (nx < 0 || ny < 0 || nx >= W || ny >= H || c[ny * W + nx] !== AIR) continue;
-        if (isUnderground(nx, ny)) rim = true; else sky = true;
+
+      let col;
+      if (cell === LOOSE) {
+        const n = (g - 0.5) * 10;
+        col = [LOOSE_COLOR[0] + n, LOOSE_COLOR[1] + n, LOOSE_COLOR[2] + n];
+      } else {
+        const L = LAYER_COLORS[layerOf(x, y)];
+        const t = world.tex[i];
+        const n = (g - 0.5) * 4;
+        if (t === 3) {
+          // Kiesel: grau mit dunklem Rand
+          let rim = false;
+          for (let k = 0; k < 4; k++) {
+            const nx = x + DX[k], ny = y + DY[k];
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H || world.tex[ny * W + nx] !== 3) rim = true;
+          }
+          col = rim ? [84, 80, 82] : [126 + n * 3, 126 + n * 3, 132 + n * 3];
+        } else if (t === 1) col = [L[1][0] + n, L[1][1] + n, L[1][2] + n];
+        else if (t === 2) col = [L[0][0] * 0.55, L[0][1] * 0.5, L[0][2] * 0.45];
+        else col = [L[0][0] + n, L[0][1] + n, L[0][2] + n];
       }
-      if (rim) { r *= 0.8; g *= 0.78; b *= 0.76; }
-      else if (sky && !solidAt(x, y - 1)) { r += 12; g += 12; b += 8; }
-      terrainPixels[i] = rgba(r, g, b);
+      terrainPixels[i] = rgba(col[0], col[1], col[2]);
     }
   }
-  drawGrass();
   terrainCtx.putImageData(terrainImage, 0, 0);
   world.dirty = false;
-}
-
-// Grashalme auf unberührtem Boden (nicht auf dem Sandhügel)
-function drawGrass() {
-  for (let x = 0; x < W; x++) {
-    const top = world.surface[x];
-    if (columnTop(x) !== top || world.cells[idx(x, top)] !== SAND) continue;
-    const g = world.grain[idx(x, top)];
-    const h = g < 0.35 ? 0 : g < 0.75 ? 1 : g < 0.93 ? 2 : 3;
-    for (let k = 1; k <= h; k++) terrainPixels[idx(x, top - k)] = GRASS[(x + k) % 3];
-  }
 }
 
 // ---------- Ameisen-Sprites ----------

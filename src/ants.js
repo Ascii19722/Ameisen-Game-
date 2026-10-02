@@ -148,7 +148,7 @@ function chooseDropColumn() {
   const ex = world.entranceX;
   for (let k = 0; k < 5; k++) {
     const side = Math.random() < 0.5 ? -1 : 1;
-    const x = Math.max(3, Math.min(W - 4, ex + side * (3 + Math.floor(Math.random() * Math.random() * 60))));
+    const x = Math.max(3, Math.min(W - 4, ex + side * (4 + Math.floor(Math.random() * 26))));
     if (!isEntranceColumn(x)) return x;
   }
   return -1;

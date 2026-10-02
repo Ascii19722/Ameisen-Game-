@@ -5,25 +5,25 @@
 const DAY_LENGTH = 300;   // Sekunden Spielzeit für einen ganzen Tag (bei Tempo 1×)
 
 const sky = {
-  time: 0.3,              // 0 = Mitternacht, 0.25 Sonnenaufgang, 0.5 Mittag, 0.75 Sonnenuntergang
+  time: 0.4,              // 0 = Mitternacht, 0.25 Sonnenaufgang, 0.5 Mittag, 0.75 Sonnenuntergang
   day: 1,
   stars: [],
   clouds: [],
-  farForest: null,
-  nearForest: null,
+  forest: null,           // Bild mit Bäumen, Halmen, Blumen, Büschen und Gras
 };
 
 // Farben über den Tag: [Zeit, Himmel oben, Himmel am Horizont, Licht-Tönung (r,g,b,Stärke)]
+// Tagsüber der warme lila-orange Himmel wie im Vorbild.
 const SKY_KEYS = [
-  [0.00, [8, 12, 34],    [24, 32, 66],    [12, 18, 52, 0.50]],
-  [0.20, [18, 24, 60],   [56, 56, 98],    [20, 24, 64, 0.42]],
-  [0.25, [72, 92, 150],  [242, 152, 100], [255, 140, 70, 0.18]],
-  [0.31, [112, 172, 226], [204, 224, 238], [255, 200, 140, 0.04]],
-  [0.50, [118, 184, 236], [208, 234, 246], [255, 255, 255, 0.0]],
-  [0.69, [112, 172, 226], [210, 222, 232], [255, 200, 140, 0.04]],
-  [0.75, [70, 76, 138],  [246, 128, 78],  [255, 110, 60, 0.20]],
-  [0.80, [18, 24, 60],   [60, 48, 92],    [20, 24, 64, 0.42]],
-  [1.00, [8, 12, 34],    [24, 32, 66],    [12, 18, 52, 0.50]],
+  [0.00, [12, 12, 32],   [36, 32, 64],    [14, 16, 48, 0.50]],
+  [0.20, [28, 24, 58],   [78, 56, 92],    [24, 22, 62, 0.40]],
+  [0.27, [80, 58, 108],  [246, 160, 112], [255, 140, 90, 0.10]],
+  [0.35, [88, 62, 106],  [240, 164, 118], [255, 255, 255, 0.0]],
+  [0.50, [98, 76, 126],  [244, 178, 132], [255, 255, 255, 0.0]],
+  [0.65, [88, 62, 106],  [240, 164, 118], [255, 255, 255, 0.0]],
+  [0.75, [64, 40, 82],   [236, 124, 88],  [255, 110, 70, 0.12]],
+  [0.80, [28, 24, 58],   [78, 52, 88],    [24, 22, 62, 0.40]],
+  [1.00, [12, 12, 32],   [36, 32, 64],    [14, 16, 48, 0.50]],
 ];
 
 const lerp = (a, b, k) => a + (b - a) * k;
@@ -49,60 +49,39 @@ const css = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
 
 function generateSky() {
   sky.stars = [];
-  for (let k = 0; k < 70; k++) {
-    sky.stars.push({ x: randInt(0, W - 1), y: randInt(0, 40), b: rand(0.4, 1), p: rand(0, 6.28) });
+  for (let k = 0; k < 80; k++) {
+    sky.stars.push({ x: randInt(0, W - 1), y: randInt(0, SURFACE_Y - 20), b: rand(0.4, 1), p: rand(0, 6.28) });
   }
   sky.clouds = [];
-  for (let k = 0; k < 7; k++) sky.clouds.push(makeCloud(rand(0, W)));
-  sky.farForest = makeForest(true);
-  sky.nearForest = makeForest(false);
+  for (let k = 0; k < 6; k++) sky.clouds.push(makeCloud(rand(0, W)));
+  sky.forest = makeForest();
 }
 
+// Wolke aus runden weißen Bällchen
 function makeCloud(x) {
-  const w = randInt(16, 34), h = randInt(6, 10);
+  const w = randInt(18, 34), h = 12;
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const g = c.getContext('2d');
-  // aus ein paar Kreisen zusammengesetzt, Unterseite flach
-  const blobs = [];
-  for (let k = 0; k < 4 + randInt(0, 3); k++) {
-    blobs.push({ x: rand(4, w - 4), y: rand(h * 0.45, h - 3), r: rand(2.5, h * 0.55) });
+  const puffs = [];
+  const n = randInt(3, 6);
+  for (let k = 0; k < n; k++) {
+    const r = rand(2.2, 3.8);
+    puffs.push({ x: lerp(r + 1, w - r - 1, n === 1 ? 0.5 : k / (n - 1)) + rand(-1, 1), y: h - r - 1 - rand(0, 3), r });
   }
   for (let y = 0; y < h; y++) {
     for (let xx = 0; xx < w; xx++) {
-      let inside = false, shade = false;
-      for (const b of blobs) {
-        const d = Math.hypot(xx - b.x, y - b.y);
-        if (d <= b.r) { inside = true; if (y - b.y > b.r * 0.35) shade = true; }
+      for (const p of puffs) {
+        const dx = xx + 0.5 - p.x, dy = y + 0.5 - p.y;
+        const d = Math.hypot(dx, dy);
+        if (d > p.r) continue;
+        g.fillStyle = d > p.r - 1 && dy > 0 ? 'rgb(228,222,226)' : 'rgb(252,250,246)';
+        g.fillRect(xx, y, 1, 1);
+        break;
       }
-      if (!inside || y >= h - 1) continue;
-      g.fillStyle = shade ? 'rgb(214,224,236)' : 'rgb(250,252,255)';
-      g.fillRect(xx, y, 1, 1);
     }
   }
-  return { img: c, x, y: rand(3, 17), speed: rand(0.6, 2.2) };
-}
-
-// Waldsilhouette als Bild in Weltgröße, steht auf der Oberfläche.
-function makeForest(far) {
-  const c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const g = c.getContext('2d');
-  const base = far ? [96, 128, 124] : [44, 76, 50];
-  const light = far ? [108, 140, 134] : [64, 102, 62];
-  const dark = far ? [86, 116, 114] : [32, 58, 40];
-  let x = randInt(-4, 2);
-  while (x < W + 6) {
-    const xi = Math.max(0, Math.min(W - 1, Math.round(x)));
-    const ground = world.surface[xi] + 1;
-    const pine = Math.random() < (far ? 0.65 : 0.5);
-    const hgt = far ? randInt(10, 20) : randInt(14, 28);
-    if (pine) drawPine(g, Math.round(x), ground, hgt, base, light, dark);
-    else drawLeafTree(g, Math.round(x), ground, hgt, base, light, dark);
-    x += far ? rand(3, 7) : rand(6, 16);
-    if (!far && Math.random() < 0.18) x += rand(10, 30);   // Lichtungen
-  }
-  return c;
+  return { img: c, x, y: rand(1, 18), speed: rand(0.8, 2.4) };
 }
 
 function pix(g, col, x, y) {
@@ -110,36 +89,98 @@ function pix(g, col, x, y) {
   g.fillRect(x, y, 1, 1);
 }
 
-function drawPine(g, x, ground, h, base, light, dark) {
-  const top = ground - h;
-  for (let y = top; y < ground - 2; y++) {
-    const r = y - top;
-    // Stufen wie Tannenzweige
-    const half = Math.floor((r % 5) * 0.5 + r * 0.22);
-    for (let dx = -half; dx <= half; dx++) {
-      const col = dx < 0 && dx > -half + 1 ? light : (dx === half ? dark : base);
-      pix(g, col, x + dx, y);
+function fillCircle(g, cx, cy, r, colorAt) {
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+      if (dx * dx + dy * dy > r * r) continue;
+      pix(g, colorAt(dx / r, dy / r), x, y);
     }
   }
-  for (let y = ground - 3; y < ground; y++) pix(g, dark, x, y);
 }
 
-function drawLeafTree(g, x, ground, h, base, light, dark) {
-  const trunkTop = ground - Math.floor(h * 0.4);
-  for (let y = trunkTop; y < ground; y++) pix(g, dark, x, y);
-  const r = Math.max(3, h * 0.35);
-  const cy = ground - h + r;
-  for (let k = 0; k < 3; k++) {
-    const bx = x + rand(-r * 0.6, r * 0.6), by = cy + rand(-1, r * 0.5), br = r * rand(0.6, 0.9);
-    for (let yy = Math.floor(by - br); yy <= Math.ceil(by + br); yy++) {
-      for (let xx = Math.floor(bx - br); xx <= Math.ceil(bx + br); xx++) {
-        const d = Math.hypot(xx - bx, yy - by);
-        if (d > br) continue;
-        const col = (xx - bx) + (yy - by) < -br * 0.5 ? light : (d > br - 1 && yy > by ? dark : base);
-        pix(g, col, xx, yy);
+// Wald in mehreren Schichten: hinten blass, vorne kräftig grün.
+const FOREST_LAYERS = [
+  { crown: [196, 178, 120], trunk: [206, 150, 116], count: 22, r: [7, 11], h: [26, 34] },
+  { crown: [164, 170, 104], trunk: [176, 120, 92],  count: 18, r: [7, 11], h: [22, 32] },
+  { crown: [128, 160, 88],  trunk: [134, 92, 66],   count: 14, r: [6, 10], h: [18, 30] },
+];
+
+function makeForest() {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const ground = SURFACE_Y;
+
+  FOREST_LAYERS.forEach((L, li) => {
+    for (let k = 0; k < L.count; k++) {
+      const x = rand(-6, W + 6);
+      const r = rand(L.r[0], L.r[1]);
+      const cy = ground - rand(L.h[0], L.h[1]);
+      // dünner Stamm
+      g.fillStyle = css(L.trunk);
+      g.fillRect(Math.round(x), Math.round(cy), li === 2 ? 2 : 1, ground - Math.round(cy));
+      // Krone aus 1–3 Kreisen, oben links etwas heller
+      const blobs = randInt(1, 3);
+      for (let b = 0; b < blobs; b++) {
+        const bx = x + rand(-r * 0.5, r * 0.5), by = cy + rand(-r * 0.3, r * 0.2), br = r * rand(0.7, 1);
+        fillCircle(g, bx, by, br, (dx, dy) =>
+          dx + dy < -0.9 ? L.crown.map(v => v + 10) : (dx + dy > 0.9 ? L.crown.map(v => v - 10) : L.crown));
       }
     }
+  });
+
+  // ein paar kräftig grüne Bäume ganz vorne
+  for (let k = 0; k < 3; k++) {
+    const x = rand(10, W - 10), r = rand(6, 9), cy = ground - rand(28, 36);
+    g.fillStyle = 'rgb(104,70,50)';
+    g.fillRect(Math.round(x), Math.round(cy), 2, ground - Math.round(cy));
+    for (let b = 0; b < 3; b++) {
+      fillCircle(g, x + rand(-r * 0.6, r * 0.6), cy + rand(-r * 0.4, r * 0.3), r * rand(0.7, 1), (dx, dy) =>
+        dx + dy < -0.8 ? [96, 172, 84] : (dx + dy > 0.8 ? [58, 128, 62] : [74, 150, 72]));
+    }
+    // kleine helle Früchte/Blätter
+    for (let s = 0; s < 4; s++) pix(g, [196, 226, 160], Math.round(x + rand(-r, r)), Math.round(cy + rand(-r * 0.6, r * 0.6)));
   }
+
+  // gelbe Halme im Zickzack
+  for (let k = 0; k < 14; k++) {
+    let x = Math.round(rand(0, W)), y = ground - 1;
+    const hgt = randInt(10, 22);
+    for (let s = 0; s < hgt; s++) {
+      pix(g, s > hgt - 6 ? [236, 214, 72] : [196, 186, 70], x, y - s);
+      if (s % 4 === 3) x += Math.random() < 0.5 ? -1 : 1;
+    }
+  }
+
+  // Pusteblumen: dünner Stiel mit weißer Kugel
+  for (let k = 0; k < 7; k++) {
+    const x = Math.round(rand(0, W)), hgt = randInt(9, 16);
+    g.fillStyle = 'rgb(108,150,80)';
+    g.fillRect(x, ground - hgt, 1, hgt);
+    fillCircle(g, x + 0.5, ground - hgt, 1.8, () => [246, 244, 236]);
+  }
+
+  // Büsche am Boden
+  for (let k = 0; k < 9; k++) {
+    const x = rand(0, W), r = rand(2.5, 4.5);
+    fillCircle(g, x, ground - r * 0.5, r, (dx, dy) => dy < -0.4 ? [78, 154, 74] : [56, 126, 60]);
+    if (Math.random() < 0.6) pix(g, [230, 236, 220], Math.round(x), Math.round(ground - r));
+  }
+
+  // Grasstreifen mit Halmen und kleinen weißen Blüten
+  for (let x = 0; x < W; x++) {
+    pix(g, [64, 128, 52], x, ground - 1);
+    const hgt = randInt(0, 3);
+    const col = [[72, 140, 56], [96, 166, 70], [58, 118, 48]][randInt(0, 2)];
+    for (let s = 1; s <= hgt; s++) pix(g, col, x, ground - 1 - s);
+    if (Math.random() < 0.05) {
+      pix(g, [90, 150, 70], x, ground - 2);
+      pix(g, [90, 150, 70], x, ground - 3);
+      pix(g, [250, 250, 244], x, ground - 4);
+    }
+  }
+  return c;
 }
 
 // ---------- Ablauf ----------
@@ -149,7 +190,7 @@ function updateSky(dt) {
   if (sky.time >= 1) { sky.time -= 1; sky.day++; }
   for (const c of sky.clouds) {
     c.x += c.speed * dt;
-    if (c.x > W + 2) { Object.assign(c, makeCloud(-c.img.width - rand(0, 40))); }
+    if (c.x > W + 2) Object.assign(c, makeCloud(-c.img.width - rand(0, 40)));
   }
 }
 
@@ -157,18 +198,17 @@ function clockText() {
   const m = Math.floor(sky.time * 24 * 60);
   const hh = String(Math.floor(m / 60)).padStart(2, '0');
   const mm = String(Math.floor(m % 60 / 10) * 10).padStart(2, '0');
-  return `Tag ${sky.day}, ${hh}:${mm}`;
+  return `${hh}:${mm}`;
 }
 
 // ---------- Zeichnen ----------
 
-// Hintergrund: Himmelsverlauf, Sterne, Sonne, Mond
+// Hintergrund: Himmelsverlauf, Sterne, Mond
 function drawSkyBackground(g, now) {
   const t = sky.time;
   const col = skyColors(t);
-  const horizon = Math.round(H * 0.25);
-  for (let y = 0; y < horizon + 4; y++) {
-    const k = Math.pow(Math.min(1, y / horizon), 1.6);
+  for (let y = 0; y < SURFACE_Y; y++) {
+    const k = Math.min(1, y / (SURFACE_Y - 4));
     g.fillStyle = css(lerpArr(col.top, col.horizon, k));
     g.fillRect(0, y, W, 1);
   }
@@ -180,43 +220,22 @@ function drawSkyBackground(g, now) {
       g.fillStyle = `rgba(255,250,225,${a.toFixed(3)})`;
       g.fillRect(s.x, s.y, 1, 1);
     }
+    drawMoon(g, (t + 0.5) % 1);
   }
-
-  // Sonne (tagsüber) und Mond (nachts) auf einem Bogen über den Himmel
-  drawOrb(g, t, horizon, 4, [255, 238, 168], [255, 220, 140]);
-  drawOrb(g, (t + 0.5) % 1, horizon, 3, [232, 234, 240], null);
 }
 
-function drawOrb(g, t, horizon, r, color, glow) {
+function drawMoon(g, t) {
   if (t < 0.2 || t > 0.8) return;
   const p = (t - 0.2) / 0.6;
-  const x = Math.round(lerp(-8, W + 8, p));
-  const y = Math.round(horizon + 6 - Math.sin(Math.PI * p) * (horizon - 6));
-  if (glow) {
-    g.fillStyle = `rgba(${glow[0]},${glow[1]},${glow[2]},0.25)`;
-    disc(g, x, y, r + 2);
-  }
-  g.fillStyle = css(color);
-  disc(g, x, y, r);
-  if (!glow) {   // Mondkrater
-    g.fillStyle = 'rgb(196,200,212)';
-    g.fillRect(x - 1, y - 1, 1, 1);
-    g.fillRect(x + 1, y + 1, 1, 1);
-  }
+  const x = lerp(-8, W + 8, p);
+  const y = SURFACE_Y - 10 - Math.sin(Math.PI * p) * (SURFACE_Y - 18);
+  fillCircle(g, x, y, 3.5, (dx, dy) => (dx > 0.2 && dy < 0.1 ? [204, 206, 214] : [236, 236, 240]));
 }
 
-function disc(g, cx, cy, r) {
-  for (let y = -r; y <= r; y++) {
-    const w = Math.floor(Math.sqrt(r * r - y * y + r * 0.8));
-    g.fillRect(cx - w, cy + y, w * 2 + 1, 1);
-  }
-}
-
-// Wolken und Wald liegen vor dem Himmel, aber hinter dem Sand.
+// Wolken und Wald liegen vor dem Himmel, aber hinter dem Boden.
 function drawSkyForeground(g) {
   for (const c of sky.clouds) g.drawImage(c.img, Math.round(c.x), Math.round(c.y));
-  g.drawImage(sky.farForest, 0, 0);
-  g.drawImage(sky.nearForest, 0, 1);
+  g.drawImage(sky.forest, 0, 0);
 }
 
 // Tageslicht über alles legen, was schon auf g gezeichnet ist (nicht über den Himmel).

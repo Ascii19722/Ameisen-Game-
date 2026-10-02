@@ -1,7 +1,8 @@
 # CLAUDE.md – Regeln für dieses Projekt
 
 Ameisen-Sim: Pixel-Art-Ameisenkolonie im Querschnitt. Zum Zuschauen und Chillen,
-kein Ziel, kein Game Over. Vorbild für die Optik: @ants.sim (Referenz-Frames in `referenz/`).
+kein Ziel, kein Game Over. Vorbild für die Optik: @ants.sim, Vorbild für den Spielablauf:
+fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 
 ## Sprache
 - Antworten, Kommentare im Code und Commit-Nachrichten auf Deutsch.
@@ -27,7 +28,8 @@ kein Ziel, kein Game Over. Vorbild für die Optik: @ants.sim (Referenz-Frames in
 - Pixel-Art: alles wird erst in kleiner Auflösung (320×180) gezeichnet und dann
   ohne Glättung hochskaliert.
 - Querformat, Vollbild am PC.
-- Farben an den Referenz-Frames orientieren (warmer Sand, dunklere Tunnel, schwarze Ameisen).
+- Look wie @ants.sim: Bodenschichten mit Sprenkeln, Steine, braune Gänge, runde Kammern,
+  lila-oranger Himmel, runder Wald, helle Info-Karte. Farben stehen in `render.js` und `sky.js`.
 
 ## Arbeitsweise
 - In Stufen bauen (siehe START.md). Pro Stufe nur das, was dazugehört.

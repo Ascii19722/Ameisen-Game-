@@ -23,6 +23,8 @@ const PLAN = {
   chamberGap: 34,    // Mindestabstand zwischen Kammern
   stub: 9,           // Länge des Stummels zu einer Seitenkammer
   chamberSize: 2.3,  // Größe der Kammern (ca. 3,5 Ameisen breit)
+  queenDepth: [105, 125],   // so tief gräbt die Königin ihren Schacht (Nutzerwunsch: etwa auf halber Höhe)
+  royalMoves: 0,     // wie oft die Königin in eine tiefere Kammer umzieht (0 = nie, Nutzerwunsch)
 };
 
 const world = {
@@ -115,7 +117,7 @@ function generateWorld() {
 
   // Eingang und erste Grabstelle: die Königin gräbt zuerst tief nach unten
   carve(world.entranceX, SURFACE_Y + 1, TUNNEL_R);
-  world.tips.push(newTip(world.entranceX, SURFACE_Y + 2, Math.PI / 2 + rand(-0.25, 0.25), (H - SURFACE_Y) * 0.72 / 0.8, 'queen'));
+  world.tips.push(newTip(world.entranceX, SURFACE_Y + 2, Math.PI / 2 + rand(-0.25, 0.25), rand(PLAN.queenDepth[0], PLAN.queenDepth[1]) / 0.8, 'queen'));
   world.dirty = true;
   world.dirtyRect = { x0: 0, y0: 0, x1: W - 1, y1: H - 1 };
 }
@@ -439,7 +441,7 @@ function updatePlan(dt) {
   }
   if (!world.royal) return;
   // Wächst die Kolonie, graben sie weiter unten eine neue, sicherere Königskammer
-  if (ants.length >= 60 * ((world.moves || 0) + 1) && world.royal.cy < H - 60 && !colony.moveQueen &&
+  if ((world.moves || 0) < PLAN.royalMoves && ants.length >= 60 * ((world.moves || 0) + 1) && world.royal.cy < H - 60 && !colony.moveQueen &&
       !world.tips.some(t => t.forQueen) && Math.random() < dt * 0.05) {
     // eine der tiefsten Stellen (zufällig, damit ein Fehlversuch nicht immer wieder gleich endet)
     const deepest = world.pts.filter(p => !nearRoyal(p) && p[1] < H - 15).sort((p, q) => q[1] - p[1]).slice(0, 8);

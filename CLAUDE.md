@@ -134,7 +134,8 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   Königin liegt still in ihrer eigenen Kammer (dort beginnen keine neuen Gänge), wird gefüttert, legt laufend
   Eier. Futterkammer gut sichtbar (größere Futterstücke) und etwa halb voll; ist der Vorrat unter 40 %,
   legt die Königin keine Eier (Kolonie regelt sich selbst).
-- Umzug der Königin: ab 60/120/… Ameisen graben sie tiefer unten eine neue Königskammer; ist sie fertig,
+- Königskammer auf HALBER Höhe (Schacht 105–125 Pixel tief, PLAN.queenDepth), nicht ganz unten (Nutzer-Skizze).
+- Umzug der Königin (derzeit AUS, PLAN.royalMoves = 0, Nutzerwunsch): ab 60/120/… Ameisen graben sie tiefer unten eine neue Königskammer; ist sie fertig,
   holen 4 Arbeiterinnen die Königin ab und begleiten sie hinunter (vorne/hinten). Alte Kammer bekommt neue Aufgabe.
   Baustellen ohne Fortschritt (150 s) werden aufgegeben.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.

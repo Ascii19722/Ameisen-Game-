@@ -33,8 +33,13 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 
 ## Ameisen-Design (vom Nutzer ausgewählt)
 - Ameisen von oben, eckig, Pixel-Art mit harten Kanten (Posen werden vorgezeichnet, `render.js`).
-- Arbeiterin = Design Nr. 4: schwarz, feine Pixel (ANT_RES 4), Größe 1.4.
-- Königin, Soldatin usw.: Vorschläge gezeigt, Auswahl steht noch aus.
+- Arbeiterin = Design A11: schwarz, schlank (Hinterleib/Brust 0.85, Kopf 0.9), Beine 1.1, feine Pixel (ANT_RES 4), Größe 1.4.
+- Königin: Grundform K1 (schwarz, groß, Flügelstummel), mit längerem Hinterleib und Streifen/Farben; genaue Variante (Q1–Q30) steht noch aus.
+- Soldatin: soll offene Kiefer haben; Auswahl aus 30 Vorschlägen (Zange/Säbel/Zahn × 10 Farben) steht noch aus.
+- Pflegerin = P7: grau-schwarz (Körper 52,48,50 / Glanz 112,106,110 / Beine 40,38,40), klein (Größe 1.05, Hinterleib 0.9).
+- Junge Königin (Flieger) = P11: schwarz, Größe 1.85, Flügel, zwei Knoten.
+- Männchen = P27: grau-schwarz, schlank (Größe 1.45, kleiner Kopf 0.75), Flügel.
+- Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 
 ## Arbeitsweise

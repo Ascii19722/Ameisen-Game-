@@ -150,12 +150,14 @@ function drawAntShape(g, phase, carry) {
   // Beine (Dreifuß-Gang)
   g.strokeStyle = pcss(ANT_PALETTE.leg);
   g.lineWidth = px * 1.1;
-  leg(g, 0.25, -1, 0.75 + sw, 1.1);
-  leg(g, 0.05, 1, 0.05 - sw, 1.2);
-  leg(g, -0.15, -1, -0.75 + sw, 1.15);
-  leg(g, 0.25, 1, 0.75 - sw, 1.1);
-  leg(g, 0.05, -1, 0.05 + sw, 1.2);
-  leg(g, -0.15, 1, -0.75 - sw, 1.15);
+  // Design A11: schlank, etwas längere Beine
+  const LL = 1.1;
+  leg(g, 0.25, -1, (0.75 + sw) * LL, 1.1 * LL);
+  leg(g, 0.05, 1, (0.05 - sw) * LL, 1.2 * LL);
+  leg(g, -0.15, -1, (-0.75 + sw) * LL, 1.15 * LL);
+  leg(g, 0.25, 1, (0.75 - sw) * LL, 1.1 * LL);
+  leg(g, 0.05, -1, (0.05 + sw) * LL, 1.2 * LL);
+  leg(g, -0.15, 1, (-0.75 - sw) * LL, 1.15 * LL);
 
   // Fühler, geknickt
   const f = Math.sin(phase * 0.5) * 0.1;
@@ -169,20 +171,20 @@ function drawAntShape(g, phase, carry) {
 
   g.fillStyle = pcss(ANT_PALETTE.body);
   // Hinterleib: kantiges Achteck
-  poly(g, [-0.5, 0, -0.7, -0.58, -1.3, -0.82, -2.0, -0.66, -2.35, 0, -2.0, 0.66, -1.3, 0.82, -0.7, 0.58]);
+  poly(g, [-0.5, 0, -0.7, -0.49, -1.3, -0.7, -2.0, -0.56, -2.35, 0, -2.0, 0.56, -1.3, 0.7, -0.7, 0.49]);
   // Stielchen
   poly(g, [-0.6, 0, -0.42, -0.16, -0.2, 0, -0.42, 0.16]);
   // Brust: Sechseck
-  poly(g, [-0.3, 0, -0.1, -0.32, 0.35, -0.38, 0.6, 0, 0.35, 0.38, -0.1, 0.32]);
+  poly(g, [-0.3, 0, -0.1, -0.27, 0.35, -0.32, 0.6, 0, 0.35, 0.32, -0.1, 0.27]);
   // Kopf: kantig, vorne etwas breiter
-  poly(g, [0.55, 0, 0.68, -0.44, 1.1, -0.52, 1.4, -0.2, 1.4, 0.2, 1.1, 0.52, 0.68, 0.44]);
+  poly(g, [0.55, 0, 0.68, -0.4, 1.1, -0.47, 1.4, -0.18, 1.4, 0.18, 1.1, 0.47, 0.68, 0.4]);
   // Kiefer
   poly(g, [1.3, -0.25, 1.62, -0.08, 1.35, -0.05]);
   poly(g, [1.3, 0.25, 1.62, 0.08, 1.35, 0.05]);
 
   // Glanzlichter als kleine Kanten
   g.fillStyle = pcss(ANT_PALETTE.shine);
-  poly(g, [-0.85, -0.38, -1.35, -0.6, -1.9, -0.45, -1.4, -0.32]);
+  poly(g, [-0.85, -0.32, -1.35, -0.51, -1.9, -0.38, -1.4, -0.27]);
   poly(g, [0.85, -0.22, 1.1, -0.28, 1.2, -0.12, 0.95, -0.1]);
 
   if (carry) {

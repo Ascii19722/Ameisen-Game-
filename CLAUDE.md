@@ -47,6 +47,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   lila-oranger Himmel, runder Wald, helle Info-Karte. Farben stehen in `render.js` und `sky.js`.
 
 ## Ameisen-Design (vom Nutzer ausgewählt)
+- ART: ROTE WALDAMEISE (Formica rufa), Nutzerwahl. Farben in sprites.js (RUFA): Kopf+Brust rostrot (front),
+  Hinterleib schwarzbraun (body), Beine dunkelrot, dunkler Fleck oben auf dem Kopf. Formen (A11, R13, S17, P7) bleiben.
+  Hügel aus Kiefernnadeln/Zweigen (LOOSE wird als Nadeln gezeichnet). Räuber-Feinde sind SCHWARZ.
+  Hinweis: echte Waldameisen haben keine Säbel-Soldatinnen – S17 bleibt auf Nutzerwunsch.
 - Ameisen von oben, eckig, Pixel-Art mit harten Kanten (Posen werden vorgezeichnet, `render.js`).
 - Arbeiterin = Design A11: schwarz, schlank (Hinterleib/Brust 0.85, Kopf 0.9), Beine 1.1, feine Pixel (ANT_RES 4), Größe 1.4.
 - Königin = R13 (gewählt): K1-Grundform (schwarz, Größe 2.1, Brust 1.35 breit/1.25 lang, Kopf 1.1,

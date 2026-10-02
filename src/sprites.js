@@ -18,22 +18,27 @@ const C = {
 };
 const rgbCss = c => `rgb(${c[0]},${c[1]},${c[2]})`;
 
+// Rote Waldameise (Formica rufa): Kopf und Brust rostrot, Hinterleib schwarzbraun, Beine dunkelrot.
+// front = Farbe von Kopf, Brust und Knoten; body = Hinterleib.
+const RUFA = { front: [170, 70, 38], frontShine: [214, 120, 80], body: [38, 26, 22], shine: [92, 70, 60],
+  leg: [112, 48, 30], far: [150, 84, 58] };
+
 // Die Ameisen-Sorten mit Körperbau nach echten Ameisen (siehe CLAUDE.md)
 const CASTES = {
-  worker: { size: 1.4, body: C.black, shine: C.shine, leg: C.leg, far: C.far,
+  worker: { size: 1.4, ...RUFA,
     gW: 0.85, gL: 1, thW: 0.85, headW: 0.9, headL: 1, legLen: 1.1, eye: 0.8 },
-  queen: { size: 2.1, body: C.black, shine: C.shine, leg: C.leg, far: C.far,
+  queen: { size: 2.1, ...RUFA,
     gW: 1.35, gL: 1.6, thW: 1.2, headW: 1.05, headL: 1, legLen: 1, eye: 1.3,
     thorax: 'queen', stubs: true, plates: 5, ocelli: true },
-  // Soldatin S17: grau, groß, riesiger eckiger Kopf, Säbel-Kiefer, zwei Knoten
-  soldier: { size: 1.75, body: C.grey, shine: C.greyShine, leg: C.greyLeg, far: C.greyFar,
+  // Soldatin S17: groß, riesiger eckiger Kopf, Säbel-Kiefer, zwei Knoten (in Waldameisen-Farben, etwas dunkler)
+  soldier: { size: 1.75, ...RUFA, front: [146, 56, 30], frontShine: [190, 100, 66],
     gW: 0.95, gL: 1, thW: 0.95, headW: 1.6, headL: 1.4, legLen: 0.95, eye: 0.9,
     headSquare: true, saber: 1.3, nodes: 2 },
-  // Räuber: fremde rote Ameise (Feind)
-  raider: { size: 1.5, body: [150, 62, 36], shine: [206, 110, 70], leg: [110, 44, 26], far: [170, 96, 64],
+  // Räuber: fremde schwarze Ameise (Feind) – gut von den roten Waldameisen zu unterscheiden
+  raider: { size: 1.5, body: [30, 30, 34], shine: [96, 96, 108], leg: [24, 24, 28], far: [70, 70, 78],
     gW: 0.9, gL: 1, thW: 0.9, headW: 1, headL: 1, legLen: 1.1, eye: 0.9 },
-  // Pflegerin P7: grau, klein
-  nurse: { size: 1.05, body: C.grey, shine: C.greyShine, leg: C.greyLeg, far: C.greyFar,
+  // Pflegerin P7: klein, junge Arbeiterin (noch etwas heller)
+  nurse: { size: 1.05, ...RUFA, front: [192, 100, 62], frontShine: [228, 150, 108], body: [62, 46, 40],
     gW: 0.9, gL: 1, thW: 0.9, headW: 0.95, headL: 1, legLen: 1.05, eye: 0.8 },
 };
 
@@ -110,7 +115,8 @@ function drawSideAnt(g, ph, p, carry) {
     g.restore();
     g.fillStyle = rgbCss(p.body);
   }
-  // Knoten (Soldatin: zwei)
+  // Knoten (Soldatin: zwei) – ab hier Kopf-und-Brust-Farbe
+  g.fillStyle = rgbCss(p.front || p.body);
   if (p.nodes === 2) {
     sPoly(g, sEll(-0.58, by - 0.1, 0.13, 0.2));
     sPoly(g, sEll(-0.36, by - 0.14, 0.14, 0.22));
@@ -125,7 +131,7 @@ function drawSideAnt(g, ph, p, carry) {
     sPoly(g, [-0.22, by - 0.36 * t, -0.16, by - 0.36 * t, -0.16, by - 0.05, -0.22, by - 0.05]);
     g.fillStyle = rgbCss(C.scar);
     sPoly(g, sEll(-0.02, by - 0.32 * t, 0.09, 0.06, 0, 6));
-    g.fillStyle = rgbCss(p.body);
+    g.fillStyle = rgbCss(p.front || p.body);
   } else {
     sPoly(g, [-0.32, by + 0.12, -0.25, by - 0.28 * t, 0.12, by - 0.4 * t, 0.48, by - 0.28 * t, 0.62, by + 0.02,
       0.4, by + 0.18, -0.05, by + 0.2]);
@@ -144,7 +150,12 @@ function drawSideAnt(g, ph, p, carry) {
   // Glanz, Auge, Punktaugen
   g.fillStyle = rgbCss(p.shine);
   sPoly(g, sEll(gx + 0.15, gy - 0.38 * p.gW, 0.42 * p.gL, 0.12, gr, 10));
+  g.fillStyle = rgbCss(p.frontShine || p.shine);
   sPoly(g, sEll(hx + 0.05, hy - 0.2 * p.headW, 0.16, 0.07, 0.25, 8));
+  if (p.front) {   // dunkler Fleck oben auf dem Kopf (typisch für die Rote Waldameise)
+    g.fillStyle = rgbCss(p.body);
+    sPoly(g, sEll(hx - 0.12, hy - 0.26 * p.headW, 0.14, 0.07, 0.2, 8));
+  }
   g.fillStyle = rgbCss(C.eye);
   const er = 0.07 * p.eye;
   sPoly(g, sEll(hx + 0.15, hy - 0.04, er, er * 1.1, 0, 8));
@@ -182,7 +193,7 @@ function pixelateSprite(g, palette) {
 const antSprites = {};   // antSprites[caste][carry ? 1 : 0][frame]
 function buildSideSprites() {
   for (const [name, p] of Object.entries(CASTES)) {
-    const palette = [p.body, p.shine, p.leg, p.far, C.plate, C.eye, C.ocelli, C.scar, C.grain, C.grainEdge];
+    const palette = [p.body, p.shine, p.leg, p.far, p.front, p.frontShine, C.plate, C.eye, C.ocelli, C.scar, C.grain, C.grainEdge].filter(Boolean);
     antSprites[name] = [[], []];
     for (let carry = 0; carry < 2; carry++) {
       for (let f = 0; f < WALK_FRAMES; f++) {
@@ -343,7 +354,7 @@ function buildItemSprites() {
   for (const c of ['worker', 'nurse', 'soldier', 'raider']) {
     const p = CASTES[c], f = p.size / 1.4;
     itemSprites['corpse_' + c] = [make(g => { g.scale(f, -f); g.translate(0, -0.25); drawSideAnt(g, 0, p, false); }, 64,
-      [p.body, p.shine, p.leg, p.far, C.eye])];
+      [p.body, p.shine, p.leg, p.far, p.front, p.frontShine, C.eye].filter(Boolean))];
   }
   itemSprites.larva = [];
   for (let f = 0; f < 6; f++) itemSprites.larva.push(make(g => drawLarva(g, f / 6 * Math.PI * 2)));

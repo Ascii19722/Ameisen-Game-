@@ -399,7 +399,7 @@ function startRoom(cx, cy, royal, ex, ey) {
   const blobs = roomBlobs(cx, floor, royal);
   blobs.sort((a, b) => Math.hypot(a[0] - ex, a[1] - ey) - Math.hypot(b[0] - ex, b[1] - ey));
   const tip = newTip(cx, cy, 0, blobs.length, 'room');
-  Object.assign(tip, { cx, cy, floor, blobs, royal });
+  Object.assign(tip, { cx, cy, floor, blobs, royal, ex, ey });
   world.tips.push(tip);
 }
 
@@ -456,6 +456,12 @@ function updatePlan(dt) {
     if (world.time - t.touched < 150) continue;
     if (t.kind === 'queen') endTip(t, true);
     else if (t.kind === 'room' && t.blobs.length < t.max - 8) finishRoom(t);   // halb fertige Kammer zählt
+    else if (t.royal && !t.retried) {   // Königskammer nie aufgeben: direkt am Schachtende neu anlegen
+      removeTip(t);
+      startRoom(t.ex, t.ey, true, t.ex, t.ey);
+      const n = world.tips[world.tips.length - 1];
+      n.retried = true;
+    } else if (t.royal) finishRoom(t);
     else removeTip(t);
   }
   if (world.dug >= MAX_DUG) return;

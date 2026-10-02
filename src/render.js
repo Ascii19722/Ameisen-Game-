@@ -89,8 +89,11 @@ function cellColor(x, y) {
 
   let col;
   if (cell === LOOSE) {
-    const n = (g - 0.5) * 10;
-    col = [LOOSE_COLOR[0] + n, LOOSE_COLOR[1] + n, LOOSE_COLOR[2] + n];
+    // Waldameisen-Hügel aus Kiefernnadeln und Zweigen: braune Stricheln in verschiedenen Tönen
+    const t = ((x * 3 + y * 5) ^ (x * y)) & 7, n = (g - 0.5) * 16;
+    const NEEDLE = [[132, 82, 44], [158, 104, 58], [104, 64, 36], [176, 128, 74], [120, 78, 46], [92, 58, 34], [146, 96, 52], [168, 116, 66]];
+    const c = NEEDLE[(t + (g > 0.7 ? 3 : 0)) & 7];
+    col = [c[0] + n, c[1] + n, c[2] + n];
   } else {
     const L = LAYER_COLORS[layerOf(x, y)];
     const t = world.tex[i];

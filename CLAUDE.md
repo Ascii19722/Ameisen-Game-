@@ -28,7 +28,8 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `src/save.js` – Speichern im Browser (localStorage), „Neue Kolonie“
 - `src/main.js` – Start, Spielschleife, Tasten, HUD
 - `electron/main.js` + `package.json` – Start als Programm (.exe); `build-exe.sh` baut die Windows-ZIP
-  (lädt fertiges Electron herunter, kein npm install nötig)
+  (lädt fertiges Electron herunter, kein npm install nötig). `Windows-installieren.bat` (+ .ps1) macht
+  dasselbe direkt beim Nutzer unter Windows und legt eine Verknüpfung auf den Desktop.
 
 ## Optik
 - Pixel-Art: alles wird erst in kleiner Auflösung (320×180) gezeichnet und dann

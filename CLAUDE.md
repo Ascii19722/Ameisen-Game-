@@ -64,6 +64,11 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Kammern NICHT dicht aneinander: wie im ants.sim-Video klein und rund (ca. 3–4× Gangbreite),
   zwischen zwei Kammern mindestens eine Kammerbreite Sand (Mindestabstand), Kammern am Ende von
   Ästen oder an Knicken, an einem kurzen Stummel. Viel freier Sand rund ums Nest.
+- Proportionen wie im ants.sim-Video (nachgemessen): Kammer ca. 3,5–4 Ameisenlängen breit und gut 2 hoch;
+  Hauptgang ca. 1 Ameise breit, Seitengänge etwas schmaler; Äste 4–9 Ameisenlängen; ganzes Nest ca.
+  45–50 Ameisenlängen tief (lang gezogen). Favoriten: Bogen „Proportionen“ Nr. 1–3 (wie 3 und 4).
+  Folge: Das Nest ist dann ca. 300 Welt-Pixel tief – größer als der jetzige Bildschirm (320×180).
+  Die Welt muss also größer werden (Kamera mit Scrollen/Zoomen) oder die Ameisen kleiner.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

@@ -19,6 +19,7 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 ## Aufbau
 - `index.html` – Seite und Canvas
 - `src/world.js` – Sandraster, Oberfläche, Tunnelplanung
+- `src/colony.js` – Kolonie: Königin, Brut (Ei → Larve → Kokon → Ameise), Futter, Kammer-Aufgaben
 - `src/ants.js` – Ameisen: Wegfindung, Graben, Sand tragen
 - `src/sprites.js` – Ameisen-Bilder von der Seite (Laufbilder je Sorte, vorgezeichnet)
 - `src/sky.js` – Himmel, Sonne/Mond, Sterne, Wolken, Wald, Tageszeit
@@ -108,6 +109,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Seitenansicht: Beine KURZ, Körper nah am Boden (nicht hochbeinig), kleine Schritte.
 - Laufen: deutlicher Dreifuß-Gang (je 3 Beine heben sich, schwingen nach vorne, setzen auf; die anderen
   3 schieben), Knie knicken, Füße heben sich sichtbar, Körper wippt leicht, Fühler tasten.
+- Graben: Ameisen beißen nur Sand ab, der an einen offenen Gang grenzt und in ihrer Reichweite liegt
+  (Krümel für Krümel, nie aus dem Nichts). Ameisen ohne Halt fallen herunter.
+- Futter: Pflanzen an der Oberfläche (Blätter, Blüten, Samen) → Vorratskammer → Königin und Larven.
+  Die Königin isst ständig; ist sie satt, legt sie Eier. Brut wird in ihre Kammer getragen.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

@@ -177,7 +177,7 @@ function carve(cx, cy, r, floorY = Infinity) {
 }
 
 function newTip(x, y, dir, max, kind) {
-  return { x, y, dir, bias: dir, len: 0, max, kind, wall: 0, stuck: 0, blobs: null };
+  return { x, y, dir, bias: dir, len: 0, max, kind, wall: 0, stuck: 0, blobs: null, goal: null, through: false };
 }
 
 // Weltrand und Steine: werden erst bemerkt, wenn die Ameise dagegen stößt (kein Röntgenblick)
@@ -191,9 +191,45 @@ function knownTunnel(x, y) {
   return x > 0 && y > 0 && x < W && y < H && y > world.surface[x] && world.cells[idx(x, y)] === AIR;
 }
 
-// Ein Grabschritt an einer Grabstelle. Liefert die Zahl der entfernten Zellen.
-function digStep(tip) {
-  if (tip.kind === 'room') return digRoomStep(tip);
+// Abbeißen: Die Ameise trägt nur Sand ab, der an einen schon offenen Gang grenzt und in ihrer Reichweite
+// liegt – immer das Stück, das ihr am nächsten ist. So wächst ein Gang Krümel für Krümel, nie aus dem Nichts.
+function diggable(x, y, floorY) {
+  if (x < 1 || x >= W - 1 || y < SURFACE_Y - 2 || y >= H - 1 || y > floorY) return false;
+  const c = world.cells[y * W + x];
+  if (c !== SAND && c !== LOOSE) return false;
+  return world.cells[y * W + x - 1] === AIR || world.cells[y * W + x + 1] === AIR ||
+    world.cells[(y - 1) * W + x] === AIR || world.cells[(y + 1) * W + x] === AIR;
+}
+
+// Nächste offene Stelle (Rand zum Gang) in einer Grabscheibe, von (px, py) aus gesehen
+function nearestFace(cx, cy, r, floorY, px, py, reach = Infinity) {
+  let best = null, bd = reach * reach;
+  const x0 = Math.floor(cx - r), x1 = Math.ceil(cx + r), y0 = Math.floor(cy - r), y1 = Math.ceil(cy + r);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 > r * r || !diggable(x, y, floorY)) continue;
+      const d = (x - px) ** 2 + (y - py) ** 2;
+      if (d < bd) { bd = d; best = [x, y]; }
+    }
+  }
+  return best;
+}
+
+function bite(cx, cy, r, floorY, ax, ay, budget) {
+  let n = 0;
+  for (; n < budget; n++) {
+    const f = nearestFace(cx, cy, r, floorY, ax, ay, 6.5);
+    if (!f) break;
+    world.cells[idx(f[0], f[1])] = AIR;
+    markDirty(f[0] - 1, f[1] - 1, f[0] + 1, f[1] + 1);
+  }
+  world.dug += n;
+  return n;
+}
+
+// Die Grabstelle sucht sich ihr nächstes Stück (Wunschrichtung, Wackeln, Abstand, Steine ertasten).
+// Liefert false, wenn gerade kein Stück da ist (Stein im Weg oder Gang zu Ende).
+function planStep(tip) {
   let c = (Math.random() - 0.5) * PLAN.wiggle;
   const want = tip.kind === 'branch' ? tip.bias : Math.PI / 2;
   if (tip.kind !== 'stub' && !tip.stuck) c += angleTo(tip.dir, want) * PLAN.down * (tip.kind === 'branch' ? 0.6 : 1);
@@ -225,27 +261,43 @@ function digStep(tip) {
     tip.dir += tip.wall * rand(0.35, 0.6);
     tip.stuck++;
     if (tip.stuck > 45) endTip(tip, false);
-    return 0;
+    return false;
   }
   if (tip.stuck) { tip.stuck = Math.max(0, tip.stuck - 1); if (!tip.stuck && Math.random() < 0.3) tip.wall = 0; }
 
   const nx = tip.x + Math.cos(tip.dir) * 0.8, ny = tip.y + Math.sin(tip.dir) * 0.8;
   // Trifft der Gang auf einen anderen: meistens aufhören, selten durchbrechen (Schleife)
-  if (tip.len > 8 && tip.kind !== 'stub') {
-    const hx = Math.round(nx + Math.cos(tip.dir) * (TUNNEL_R + 2)), hy = Math.round(ny + Math.sin(tip.dir) * (TUNNEL_R + 2));
-    if (knownTunnel(hx, hy)) {
-      let n = 0;
-      if (Math.random() < 0.15) n = carve(hx, hy, TUNNEL_R);
-      endTip(tip, false);
-      return n;
+  if (tip.len > 8 && tip.kind !== 'stub' && !tip.through) {
+    const hx = nx + Math.cos(tip.dir) * (TUNNEL_R + 2), hy = ny + Math.sin(tip.dir) * (TUNNEL_R + 2);
+    if (knownTunnel(Math.round(hx), Math.round(hy))) {
+      if (Math.random() < 0.15) { tip.through = true; tip.max = tip.len + 5; }
+      else { endTip(tip, false); return false; }
     }
   }
-  const n = carve(nx, ny, TUNNEL_R * rand(0.9, 1.1));
-  tip.x = nx;
-  tip.y = ny;
-  tip.len++;
-  if (tip.len % 3 === 0 && tip.kind !== 'stub') world.pts.push([nx, ny, tip.dir]);
-  if (tip.len >= tip.max) endTip(tip, true);
+  tip.goal = [nx, ny, TUNNEL_R * rand(0.9, 1.1)];
+  return true;
+}
+
+// Eine Ameise arbeitet an einer Grabstelle: beißt bis zu `budget` Krümel ab. Liefert die Zahl der Krümel.
+function digStep(tip, ax, ay, budget) {
+  if (tip.kind === 'room') return digRoomStep(tip, ax, ay, budget);
+  let n = 0;
+  for (let guard = 0; guard < 8 && n < budget && world.tips.includes(tip); guard++) {
+    if (!tip.goal && !planStep(tip)) break;
+    const g = tip.goal;
+    n += bite(g[0], g[1], g[2], Infinity, ax, ay, budget - n);
+    if (nearestFace(g[0], g[1], g[2], Infinity, g[0], g[1])) {
+      if (n < budget) break;   // Rest ist außer Reichweite: nächste Ameise macht weiter
+      continue;
+    }
+    // Stück fertig abgetragen: Grabstelle rückt vor
+    tip.x = g[0];
+    tip.y = g[1];
+    tip.goal = null;
+    tip.len++;
+    if (tip.len % 3 === 0 && tip.kind !== 'stub') world.pts.push([tip.x, tip.y, tip.dir]);
+    if (tip.len >= tip.max) endTip(tip, !tip.through);
+  }
   return n;
 }
 
@@ -257,10 +309,11 @@ function removeTip(tip) {
 // Ende eines Gangs: vielleicht eine Kammer, wenn Platz ist
 function endTip(tip, reached) {
   removeTip(tip);
+  if (tip.through) return;
   const cx = tip.x + Math.cos(tip.dir) * 6, cy = tip.y + Math.sin(tip.dir) * 2;
   const wantRoom = tip.kind === 'queen' || tip.kind === 'stub' || (reached && Math.random() < 0.65);
   if (wantRoom && (tip.kind === 'queen' || chamberSpace(cx, cy, tip.x, tip.y))) {
-    startRoom(cx, cy, tip.kind === 'queen');
+    startRoom(cx, cy, tip.kind === 'queen', tip.x, tip.y);
   }
 }
 
@@ -279,28 +332,37 @@ function chamberSpace(cx, cy, ax, ay) {
 }
 
 // Eine Kammer entsteht aus vielen kleinen Grab-Bewegungen; der Boden wird flachgetreten
-function startRoom(cx, cy, royal) {
+// Die Grab-Bewegungen starten am Gang (ex, ey) und arbeiten sich von dort in die Kammer hinein.
+function startRoom(cx, cy, royal, ex, ey) {
   const k = PLAN.chamberSize * (royal ? 1.15 : 1), rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + 1);
   const blobs = [];
   for (let n = 0; n < 34; n++) {
     const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
     blobs.push([cx + Math.cos(a) * d * rx * 0.75, floor - ry + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k)]);
   }
-  blobs.sort((a, b) => Math.hypot(a[0] - cx, a[1] - floor) - Math.hypot(b[0] - cx, b[1] - floor));
+  blobs.sort((a, b) => Math.hypot(a[0] - ex, a[1] - ey) - Math.hypot(b[0] - ex, b[1] - ey));
   const tip = newTip(cx, cy, 0, blobs.length, 'room');
   Object.assign(tip, { cx, cy, floor, blobs, royal });
   world.tips.push(tip);
 }
 
-function digRoomStep(tip) {
-  const b = tip.blobs.shift();
+function digRoomStep(tip, ax, ay, budget) {
   let n = 0;
-  if (b) n = carve(b[0], b[1], b[2], tip.floor);
+  for (let guard = 0; guard < 8 && n < budget && tip.blobs.length; guard++) {
+    const b = tip.blobs[0];
+    n += bite(b[0], b[1], b[2], tip.floor, ax, ay, budget - n);
+    if (nearestFace(b[0], b[1], b[2], tip.floor, b[0], b[1])) {
+      if (n < budget) break;
+      continue;
+    }
+    tip.blobs.shift();
+  }
   if (!tip.blobs.length) {
     removeTip(tip);
     const ch = { cx: tip.cx, cy: tip.cy, floor: tip.floor, id: world.chambers.length, royal: tip.royal };
     world.chambers.push(ch);
     if (tip.royal) world.royal = ch;
+    assignRole(ch);
   }
   return n;
 }
@@ -308,10 +370,10 @@ function digRoomStep(tip) {
 // Neue Grabstellen nach dem Bauplan: erst tief, dann (mit größerem Nest) in die Breite
 function updatePlan(dt) {
   if (!world.royal || world.dug >= MAX_DUG) return;
-  const colony = 1 + world.dug / 500;
+  const nest = 1 + world.dug / 500;
   const busy = world.tips.filter(t => t.kind !== 'room').length;
   // Abzweig
-  if (busy < Math.min(1 + colony / 8, 5) && world.pts.length > 20 && Math.random() < dt * 0.25 * Math.min(1, colony / 6)) {
+  if (busy < Math.min(1 + nest / 8, 5) && world.pts.length > 20 && Math.random() < dt * 0.25 * Math.min(1, nest / 6)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];
     if (!world.branchStarts.some(b => Math.hypot(b[0] - p[0], b[1] - p[1]) < 16)) {
       const sd = Math.random() < 0.5 ? -1 : 1, dir = p[2] + sd * rand(1, 1.6);
@@ -322,13 +384,13 @@ function updatePlan(dt) {
       }
       if (free) {
         world.branchStarts.push(p);
-        const deep = Math.random() < Math.max(0.15, 0.7 - colony / 30);
+        const deep = Math.random() < Math.max(0.15, 0.7 - nest / 30);
         world.tips.push(newTip(p[0], p[1], dir, rand(30, 120), deep ? 'deep' : 'branch'));
       }
     }
   }
   // Seitenkammer über einen kurzen Stummel
-  if (world.pts.length > 30 && Math.random() < dt * 0.3 * Math.min(1, colony / 4)) {
+  if (world.tips.length < 2 + nest / 4 && world.pts.length > 30 && Math.random() < dt * 0.3 * Math.min(1, nest / 4)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];
     const sd = Math.random() < 0.5 ? -1 : 1, dir = p[2] + sd * Math.PI / 2 * rand(0.8, 1.2) - 0.2 * sd;
     const cx = p[0] + Math.cos(dir) * (PLAN.stub + 10), cy = p[1] + Math.sin(dir) * (PLAN.stub + 3);

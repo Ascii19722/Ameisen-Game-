@@ -67,7 +67,9 @@ function createAnt(x, y, caste) {
     timer: rand(0, 2),
     tip: null,
     dropX: 0,
-    carry: false,
+    carry: false,           // trägt Sand
+    load: null,             // trägt Futter oder Brut
+    job: null,              // Aufgabe für die Kolonie (siehe colony.js)
     walk: Math.random() * 8,
   };
 }
@@ -97,19 +99,26 @@ function antsAt(tip) {
 }
 
 // Wo gräbt die Ameise an einer Grabstelle? Kurz vor der Spitze, in Grabrichtung.
+// Wo gräbt die Ameise an einer Grabstelle? An der offenen Sandwand, die dem nächsten Stück am nächsten ist.
 function tipFront(tip) {
-  if (tip.kind === 'room') {
-    const b = tip.blobs[0] || [tip.cx, tip.cy];
-    return [b[0], Math.min(b[1], tip.floor)];
+  let d = null, floorY = Infinity;
+  if (tip.kind === 'room') { d = tip.blobs[0]; floorY = tip.floor; }
+  else d = tip.goal;
+  if (d) {
+    const f = nearestFace(d[0], d[1], d[2], floorY, d[0], d[1]);
+    if (f) return f;
   }
   return [tip.x + Math.cos(tip.dir) * 1.5, tip.y + Math.sin(tip.dir) * 1.5];
 }
 
 function decide(a) {
   a.tip = null;
+  if (a.job) { dropLoad(a); endJob(a); }
   if (a.caste === 'queen') { queenDecide(a); return; }
+  // Erst schauen, ob die Kolonie etwas braucht (Futter, Brut, Königin), sonst graben
+  if (Math.random() < 0.9 && colonyTask(a)) return;
   // Eine Grabstelle aussuchen, an der noch Platz ist
-  const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' ? 5 : 4));
+  const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' || t.kind === 'queen' ? 6 : 4));
   if (open.length && Math.random() < 0.85) {
     const tip = open[randInt(0, open.length - 1)];
     const [fx, fy] = tipFront(tip);
@@ -135,6 +144,8 @@ function queenDecide(a) {
       }, N);
       if (setPath(a, goal)) { a.state = 'toRoyal'; return; }
     } else {
+      // Meist ruhig in der Kammer liegen, ab und zu ein paar Schritte
+      if (Math.random() < 0.7) { a.state = 'rest'; a.timer = rand(3, 8); return; }
       wander(a, 120);
       return;
     }
@@ -189,6 +200,7 @@ function startCarry(a) {
 
 function arrive(a) {
   a.path = null;
+  if (a.job) { jobArrive(a); return; }
   switch (a.state) {
     case 'toDig': {
       const tip = a.tip;
@@ -196,7 +208,7 @@ function arrive(a) {
         const [fx, fy] = tipFront(tip);
         if (Math.hypot(a.x - fx, a.y - fy) < TUNNEL_R + 4) {
           a.state = 'digging';
-          a.timer = rand(0.4, 0.8);
+          a.timer = rand(0.5, 0.9);
           a.mx = fx - a.x; a.my = fy - a.y;
           return;
         }
@@ -214,13 +226,13 @@ function arrive(a) {
 }
 
 function finishTimer(a) {
+  if (a.job && (a.state === 'pick' || a.state === 'give')) { jobTimer(a); return; }
   switch (a.state) {
     case 'digging': {
       const tip = a.tip;
       let n = 0;
-      if (tip && world.tips.includes(tip)) {
-        for (let k = 0; k < 3 && world.tips.includes(tip); k++) n += digStep(tip);   // ein paar Grabschritte pro Gang
-      }
+      // Ein Maul voll Sand abbeißen (nur an der offenen Wand, in Reichweite der Ameise)
+      if (tip && world.tips.includes(tip)) n = digStep(tip, a.x, a.y, 12);
       a.tip = null;
       if (n > 0) startCarry(a); else decide(a);
       break;
@@ -237,6 +249,10 @@ function finishTimer(a) {
 
 function replan(a) {
   a.path = null;
+  if (a.job) {
+    if (!routeJob(a)) decide(a);
+    return;
+  }
   if (a.carry) startCarry(a); else decide(a);
 }
 
@@ -264,13 +280,20 @@ function updateAnt(a, dt) {
   if (world.cells[idx(a.x, a.y)] !== AIR) {
     while (a.y > 0 && world.cells[idx(a.x, a.y)] !== AIR) a.y--;
     a.t = 0;
-    if (a.state !== 'digging' && a.state !== 'dropping') replan(a);
+    if (a.timer <= 0) replan(a);
+  }
+  // Nichts mehr unter den Füßen (Kammer um sie herum ausgegraben)? Dann fällt sie herunter.
+  if (!isWalkable(a.x, a.y) && a.y < H - 2 && world.cells[idx(a.x, a.y + 1)] === AIR) {
+    a.y++;
+    a.t = 0;
+    if (a.path) replan(a);
+    return;
   }
   orient(a, dt);
 
   if (a.timer > 0) {
     a.timer -= dt;
-    if (a.state === 'digging') a.walk += dt * 10;
+    if (a.state === 'digging' || a.state === 'pick') a.walk += dt * 10;
     if (a.timer <= 0) finishTimer(a);
     return;
   }

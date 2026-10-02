@@ -86,6 +86,7 @@ function moveCam(dt) {
 function step(dt) {
   updatePlan(dt);
   updateAnts(dt);
+  updateColony(dt);
   updateSky(dt);
 }
 
@@ -103,7 +104,7 @@ function roundRect(x, y, w, h, r) {
 function drawHud() {
   const u = canvas.height / 1080;   // Maßstab: bei Full-HD 1
   const x = Math.round(24 * u), y = Math.round(24 * u);
-  const big = `${ants.length} AMEISEN · 0 BRUT · ${nestPercent()}% NEST`;   // Brut folgt in Stufe 3b
+  const big = `${ants.length} AMEISEN · ${broodCount()} BRUT · ${foodCount()} FUTTER`;
   ctx.font = `700 ${Math.round(26 * u)}px system-ui, sans-serif`;
   const w = Math.max(ctx.measureText(big).width + 40 * u, 360 * u), h = 92 * u;
 
@@ -154,10 +155,11 @@ function frame(now) {
 }
 
 generateWorld();
+resetColony();
 generateSky();
 spawnAnts();
 resetCam();
 requestAnimationFrame(frame);
 
 // Für Tests in der Konsole
-window.sim = { world, ants, sky, cam, step, render: () => render(ctx, canvas.width, canvas.height, cam), zoomAt, resetCam };
+window.sim = { world, ants, colony, sky, cam, step, render: () => render(ctx, canvas.width, canvas.height, cam), zoomAt, resetCam };

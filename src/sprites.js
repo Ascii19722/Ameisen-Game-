@@ -180,3 +180,99 @@ function buildSideSprites() {
   }
 }
 buildSideSprites();
+
+// ---------- Brut und Futter ----------
+// Kleine Bilder, Mitte bei (ITEM_SPR/2, ITEM_SPR/2), gleicher Maßstab wie eine Arbeiterin.
+const ITEM_SPR = 32;
+const ITEM_SCALE = SPRITE_RES * 1.4;
+const BC = {
+  cream: [244, 232, 200], creamD: [214, 198, 160], white: [255, 252, 240],
+  larva: [246, 232, 190], larvaD: [214, 192, 140], larvaHead: [150, 110, 70], mouth: [90, 60, 40],
+  coc: [244, 236, 214], cocD: [208, 194, 160],
+  leaf: [92, 150, 60], leafD: [56, 104, 40], leafL: [150, 196, 96],
+  petal: [236, 130, 160], petalL: [252, 196, 210],
+  seed: [140, 96, 52], seedL: [196, 150, 96],
+};
+// Halbe Höhe in Einheiten: damit liegt das Ding mit der Unterseite auf dem Boden
+const ITEM_HALF = { egg: 0.3, larva: 0.42, cocoon: 0.62, leaf: 0.3, petal: 0.28, seed: 0.28 };
+
+function drawLarva(g, ph) {   // Stil L4: gelblich, Ringe, kleiner Kopf, windet sich
+  const n = 7, bend = 0.35 + Math.sin(ph) * 0.35, head = Math.sin(ph * 1.7) * 0.3, k = 1.1, segL = 1.1 * 2 * k / n;
+  const pts = [];
+  let x = -1.1 * k, y = 0.3, a = -0.1;
+  for (let i = 0; i < n; i++) {
+    const thick = 0.42 * (1 - Math.abs(i - (n - 1) * 0.45) / (n * 0.9)) * k * 1.1;
+    pts.push([x, y - thick * 0.6, thick]);
+    a -= bend / n * 1.6;
+    x += Math.cos(a) * segL;
+    y += Math.sin(a) * segL * 0.8;
+  }
+  pts[n - 1][1] -= head * 0.45 * k;
+  pts[n - 2][1] -= head * 0.2 * k;
+  g.fillStyle = rgbCss(BC.larva);
+  for (const [x2, y2, r2] of pts) sPoly(g, sEll(x2, y2, r2, r2 * 0.9));
+  g.fillStyle = rgbCss(BC.larvaD);
+  for (let i = 1; i < n - 1; i++) { const [x2, y2, r2] = pts[i]; sPoly(g, [x2 - 0.03, y2 - r2, x2 + 0.03, y2 - r2, x2 + 0.03, y2 + r2 * 0.6, x2 - 0.03, y2 + r2 * 0.6]); }
+  const [hx, hy] = pts[n - 1];
+  g.fillStyle = rgbCss(BC.larvaHead);
+  sPoly(g, sEll(hx + 0.1 * k, hy + 0.02, 0.13 * k, 0.12 * k));
+  g.fillStyle = rgbCss(BC.mouth);
+  sPoly(g, sEll(hx + 0.22 * k, hy + 0.06, 0.05 * k, 0.05 * k, 0, 6));
+}
+
+const ITEM_DRAW = {
+  egg: g => {   // Ei Nr. 2: cremefarben, oval, kleiner Glanz
+    g.fillStyle = rgbCss(BC.cream); sPoly(g, sEll(0, 0, 0.42, 0.3));
+    g.fillStyle = rgbCss(BC.white); sPoly(g, sEll(-0.12, -0.1, 0.12, 0.08, 0, 8));
+  },
+  cocoon: g => {   // Kokon Nr. 13: beige, länglich, hellere Oberseite
+    g.fillStyle = rgbCss(BC.cocD);
+    sPoly(g, [-1.2, 0, -1, -0.5, -0.3, -0.62, 0.5, -0.58, 1.05, -0.35, 1.2, 0, 1.05, 0.35, 0.5, 0.58, -0.3, 0.62, -1, 0.5]);
+    g.fillStyle = rgbCss(BC.coc);
+    sPoly(g, [-1, -0.05, -0.8, -0.4, -0.2, -0.48, 0.5, -0.44, 0.95, -0.25, 0.9, -0.05]);
+  },
+  leaf: g => {   // Blattstück
+    g.fillStyle = rgbCss(BC.leaf); sPoly(g, [-0.7, 0.1, -0.3, -0.28, 0.4, -0.3, 0.75, 0, 0.3, 0.28, -0.4, 0.26]);
+    g.fillStyle = rgbCss(BC.leafL); sPoly(g, [-0.55, 0.02, 0.6, -0.04, 0.6, 0.04, -0.55, 0.08]);
+    g.fillStyle = rgbCss(BC.leafD); sPoly(g, [0.1, 0.12, 0.5, 0.06, 0.3, 0.24]);
+  },
+  petal: g => {   // Blütenblatt
+    g.fillStyle = rgbCss(BC.petal); sPoly(g, sEll(0, 0, 0.55, 0.28, -0.2));
+    g.fillStyle = rgbCss(BC.petalL); sPoly(g, sEll(-0.12, -0.08, 0.25, 0.1, -0.2, 8));
+  },
+  seed: g => {   // Samenkorn
+    g.fillStyle = rgbCss(BC.seed); sPoly(g, sEll(0, 0, 0.45, 0.28, 0.3));
+    g.fillStyle = rgbCss(BC.seedL); sPoly(g, sEll(-0.12, -0.1, 0.18, 0.08, 0.3, 8));
+  },
+};
+
+const itemSprites = {};   // itemSprites[kind][frame]
+function buildItemSprites() {
+  const palette = Object.values(BC);
+  const make = fn => {
+    const cv = document.createElement('canvas');
+    cv.width = ITEM_SPR;
+    cv.height = ITEM_SPR;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.translate(ITEM_SPR / 2, ITEM_SPR / 2);
+    g.scale(ITEM_SCALE, ITEM_SCALE);
+    fn(g);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const img = g.getImageData(0, 0, ITEM_SPR, ITEM_SPR), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
+      let best = palette[0], bd = Infinity;
+      for (const c of palette) {
+        const e = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2;
+        if (e < bd) { bd = e; best = c; }
+      }
+      d[i] = best[0]; d[i + 1] = best[1]; d[i + 2] = best[2]; d[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return cv;
+  };
+  for (const [kind, fn] of Object.entries(ITEM_DRAW)) itemSprites[kind] = [make(fn)];
+  itemSprites.larva = [];
+  for (let f = 0; f < 6; f++) itemSprites.larva.push(make(g => drawLarva(g, f / 6 * Math.PI * 2)));
+}
+buildItemSprites();

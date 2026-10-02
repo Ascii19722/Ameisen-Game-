@@ -114,6 +114,39 @@ function redrawTerrain() {
   world.dirtyRect = null;
 }
 
+// ---------- Futterpflanzen an der Oberfläche (in Welt-Auflösung) ----------
+// Je weniger Futter übrig ist, desto kleiner/kahler wird die Pflanze.
+function drawSources(g) {
+  for (const s of colony.sources) {
+    const top = columnTop(s.x), f = s.amount / s.max;
+    const px = (x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(s.x + x, top + y, w, h); };
+    if (s.kind === 'plant') {   // Blattpflanze: Stängel mit großen Blättern (werden weniger)
+      px(0, -14, '#3e6e2c', 1, 14);
+      const n = Math.ceil(f * 6);
+      for (let k = 0; k < n; k++) {
+        const y = -3 - k * 2, d = k % 2 ? 1 : -1, len = 4 - (k >> 1);
+        for (let i = 1; i <= len; i++) px(d * i, y - (i >> 1), i === len ? '#8cc45c' : '#5c9a3c');
+        px(d * 2, y - 2, '#4c8a34');
+      }
+    } else if (s.kind === 'flower') {   // Blume: hoher Stängel, große rosa Blüte
+      px(0, -16, '#3e6e2c', 1, 16);
+      px(-2, -6, '#5c9a3c', 2, 1); px(1, -9, '#5c9a3c', 2, 1); px(-3, -7, '#5c9a3c');
+      const petals = [[-2, -18], [2, -18], [-2, -16], [2, -16], [0, -20], [0, -14], [-1, -19], [1, -19], [-1, -15], [1, -15], [-3, -17], [3, -17]];
+      const n = Math.ceil(f * petals.length);
+      for (let k = 0; k < n; k++) px(petals[k][0], petals[k][1], k % 3 ? '#e8789c' : '#f4a8c0');
+      px(-1, -18, '#f0c840', 3, 3);
+      px(0, -17, '#d89c28');
+    } else {   // Gras mit dicken Samenähren
+      for (const [dx, h] of [[-2, 11], [0, 14], [2, 12]]) {
+        px(dx, -h, '#7a9a44', 1, h);
+        const n = Math.ceil(f * 4);
+        for (let k = 0; k < n; k++) { px(dx - 1, -h + k, '#c49a60'); px(dx + 1, -h + k + 1, '#a87a44'); }
+        px(dx, -h - 1, '#c49a60');
+      }
+    }
+  }
+}
+
 // ---------- Ameisen ----------
 
 function antWorldPos(a) {
@@ -127,10 +160,34 @@ function antWorldPos(a) {
   return [fx + 0.5 - Math.sin(a.rot) * 0.5, fy + 0.5 + Math.cos(a.rot) * 0.5];
 }
 
+function itemImage(it, now) {
+  const frames = itemSprites[it.kind];
+  return frames.length > 1 ? frames[Math.floor(now / 160 + it.ph) % frames.length] : frames[0];
+}
+// Larven wachsen beim Füttern
+const itemScale = it => it.kind === 'larva' ? 0.7 + 0.4 * Math.min(1, it.fed / LARVA_FEEDS) : 1;
+
+// Brut und Futter, die am Boden liegen
+function drawItems(g, cam, cw, ch, now) {
+  const s = cam.zoom, k = s / SPRITE_RES;
+  for (const list of [colony.food, colony.brood]) {
+    for (const it of list) {
+      if (it.by) continue;
+      const sc = itemScale(it), size = ITEM_SPR * k * sc;
+      const sx = (it.x + 0.5 - cam.x) * s + cw / 2;
+      const sy = (it.y + 1 - cam.y) * s + ch / 2 - ITEM_HALF[it.kind] * ITEM_SCALE * k * sc;
+      if (sx < -40 || sy < -40 || sx > cw + 40 || sy > ch + 40) continue;
+      g.drawImage(itemImage(it, now), sx - size / 2, sy - size / 2, size, size);
+    }
+  }
+}
+
 function drawAnts(g, cam, cw, ch) {
   const s = cam.zoom;
   const k = s / SPRITE_RES;   // Sprite-Pixel → Bildschirm
+  const now = performance.now();
   g.imageSmoothingEnabled = false;
+  drawItems(g, cam, cw, ch, now);
   for (const a of ants) {
     const [wx, wy] = antWorldPos(a);
     const sx = (wx - cam.x) * s + cw / 2, sy = (wy - cam.y) * s + ch / 2;
@@ -144,6 +201,10 @@ function drawAnts(g, cam, cw, ch) {
     g.rotate(a.rot);
     g.scale(a.face * squash, 1);
     g.drawImage(img, -SPRITE_SIZE * k / 2, -SPRITE_GROUND * k, SPRITE_SIZE * k, SPRITE_SIZE * k);
+    if (a.load) {   // Futter oder Brut zwischen den Kiefern
+      const u = SPRITE_RES * CASTES[a.caste].size * k, sc = 0.85 * itemScale(a.load), size = ITEM_SPR * k * sc;
+      g.drawImage(itemImage(a.load, now), 1.75 * u - size / 2, -0.8 * u - size / 2, size, size);
+    }
     g.restore();
   }
 }
@@ -155,6 +216,7 @@ function render(screenCtx, cw, ch, cam) {
   sceneCtx.clearRect(0, 0, W, H);
   drawSkyForeground(sceneCtx);
   sceneCtx.drawImage(terrain, 0, 0);
+  drawSources(sceneCtx);
   applyLight(sceneCtx, W, H);
   drawSkyBackground(offCtx, performance.now());
   offCtx.drawImage(scene, 0, 0);

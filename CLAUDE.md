@@ -125,6 +125,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Feinde: Spinne (oben, frisst bis zu 3 Ameisen, zieht verletzt ab), rote Räuber (stehlen Brut).
   Ameisen wehren sich, Soldatinnen eilen herbei. Kein Game Over: die Königin ist unverwundbar.
   Tote eigene Ameisen = Abfall, tote Räuber = Futter. Feinde erst ab 40 Ameisen.
+- Nutzerwunsch (Skizze): Kammern verteilt am ENDE langer Seitengänge (nicht direkt am Hauptschacht).
+  Königin liegt still in ihrer eigenen Kammer (dort beginnen keine neuen Gänge), wird gefüttert, legt laufend
+  Eier. Futterkammer gut sichtbar (größere Futterstücke) und etwa halb voll; ist der Vorrat unter 40 %,
+  legt die Königin keine Eier (Kolonie regelt sich selbst).
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

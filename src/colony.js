@@ -10,12 +10,12 @@ const LARVA_FEED_GAP = 20;    // frühestens so oft hat eine Larve wieder Hunger
 const LARVA_MIN_AGE = 60;
 const COCOON_TIME = 90;       // Kokon → neue Ameise
 const QUEEN_EAT = 45;         // die Königin isst alle 45 s eine Portion
-const LAY_GAP = 25;           // so oft legt sie ein Ei, wenn sie satt ist
+const LAY_GAP = 14;           // so oft legt sie ein Ei, wenn sie satt ist (sie tut fast nichts anderes)
 const MAX_ANTS = 1000;
 
 // Platz am Kammerboden in Welt-Pixeln: Abstand nebeneinander und Höhe beim Stapeln
-const ITEM_W = { egg: 2, larva: 4, cocoon: 4, leaf: 2, petal: 2, seed: 2, meat: 2, crumb: 2, shell: 3, corpse: 4 };
-const ITEM_H = { egg: 0.8, larva: 0.9, cocoon: 1.6, leaf: 0.7, petal: 0.7, seed: 0.7, meat: 0.8, crumb: 0.6, shell: 0.9, corpse: 1 };
+const ITEM_W = { egg: 2, larva: 4, cocoon: 4, leaf: 3, petal: 3, seed: 3, meat: 3, crumb: 2, shell: 3, corpse: 4 };
+const ITEM_H = { egg: 0.8, larva: 0.9, cocoon: 1.6, leaf: 1.1, petal: 1.1, seed: 1.1, meat: 1.2, crumb: 0.6, shell: 0.9, corpse: 1 };
 
 // Tote Insekten an der Oberfläche: zu schwer für eine Ameise, mehrere tragen sie gemeinsam zum Eingang
 const PREY = {
@@ -37,7 +37,7 @@ const ROLE_FALLBACK = {
   eggs: ['eggs', 'queen'],
   larvae: ['larvae', 'eggs', 'queen'],
   pupae: ['pupae', 'larvae', 'eggs', 'queen'],
-  food: ['food', 'queen'],
+  food: ['food', 'reserve', 'queen'],   // die Königskammer nur, solange es nichts anderes gibt
   waste: ['waste'],   // ohne Abfallkammer kommt Abfall nach draußen auf den Abfallhaufen
 };
 
@@ -222,7 +222,18 @@ function removeItem(item) {
 }
 
 function foodCount() { return colony.food.filter(f => !f.by).length; }
-function foodTarget() { return 8 + Math.round(ants.length * 0.25) + colony.brood.filter(b => b.kind === 'larva').length; }
+// Wie viel Futter in die Vorratskammern passt (Plätze am Boden × 5 Lagen)
+function foodCapacity() {
+  const r = bestRole('food');
+  let n = 0;
+  for (const c of world.chambers) if (c.role === r) n += Math.floor(floorSpots(c).length / ITEM_W.leaf) * 5;
+  return n;
+}
+// Die Vorratskammer soll immer etwa halb voll sein
+function foodTarget() {
+  const need = 8 + Math.round(ants.length * 0.25) + colony.brood.filter(b => b.kind === 'larva').length;
+  return Math.max(need, Math.round((colony.foodCap || 0) * 0.5));
+}
 // Zufällig eins aus allen passenden Dingen wählen. (Immer das erste zu nehmen wäre schlecht:
 // liegt genau das unerreichbar, würden alle Ameisen immer wieder daran scheitern.)
 function pickRandom(list, ok) {
@@ -284,7 +295,7 @@ function colonyTask(a) {
     }
   }
   // 4. Loses Futter in die Vorratskammer bringen
-  if (Math.random() < 0.5) {
+  if (Math.random() < 0.8) {
     const f = pickRandom(colony.food, it => !it.by && !it.claim && misplaced(it));
     if (f) { const room = roomFor('food'); if (room && startJob(a, { type: 'move', item: f, room })) return true; }
   }
@@ -361,7 +372,13 @@ function routeJob(a) {
       a.state = j.phase;
       return true;
     }
-    else { tx = j.room.cx; ty = j.room.floor; r = 6; }
+    else {   // irgendwo in der Kammer (auch wenn sie unregelmäßig ausgegraben ist)
+      const c = j.room;
+      goal = bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - c.cx) <= 10 && y >= c.floor - 7 && y <= c.floor + 1; }, N);
+      if (!setPath(a, goal)) return false;
+      a.state = j.phase;
+      return true;
+    }
     goal = bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - tx) <= r && Math.abs(y - ty) <= 2.5; }, N);
   }
   if (!setPath(a, goal)) return false;
@@ -443,7 +460,9 @@ function updateColony(dt) {
     const inRoom = (inRoyal(queen) || queen.lost) && !queen.path;
     if (colony.layTimer <= 0 && inRoom) {
       colony.layTimer = LAY_GAP * rand(0.8, 1.2);
-      if (colony.queenFood > 0.5 && colony.brood.length < 6 + ants.length * 0.5 && ants.length < MAX_ANTS) {
+      // Nur so viel Brut, wie die Kolonie ernähren kann: ist der Vorrat unter 40 %, legt sie keine Eier
+      const enoughFood = !colony.foodCap || foodCount() >= colony.foodCap * 0.4;
+      if (colony.queenFood > 0.5 && enoughFood && colony.brood.length < 6 + ants.length * 0.5 && ants.length < MAX_ANTS) {
         colony.queenFood -= 0.25;
         const egg = { kind: 'egg', caste: chooseCaste(), age: 0, fed: 0, lastFed: -999, by: null, claim: null, feeder: null, ph: Math.random() * 8 };
         colony.brood.push(egg);
@@ -475,6 +494,8 @@ function updateColony(dt) {
     if ((w.dumped && w.age > 400) || (w.room && w.age > 1500)) { liftItem(w); colony.waste.splice(k, 1); }
   }
   updatePrey(dt);
+  colony.capTimer = (colony.capTimer || 0) - dt;
+  if (colony.capTimer <= 0) { colony.capTimer = 5; colony.foodCap = foodCapacity(); }
   // Verschüttete Dinge (z. B. unter dem Sandhügel) kommen wieder nach oben
   colony.buryCheck = (colony.buryCheck || 0) - dt;
   if (colony.buryCheck <= 0) {

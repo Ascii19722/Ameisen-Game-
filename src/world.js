@@ -311,7 +311,9 @@ function endTip(tip, reached) {
   removeTip(tip);
   if (tip.through) return;
   const cx = tip.x + Math.cos(tip.dir) * 6, cy = tip.y + Math.sin(tip.dir) * 2;
-  const wantRoom = tip.kind === 'queen' || tip.kind === 'stub' || (reached && Math.random() < 0.65);
+  // Seitengänge enden fast immer in einer Kammer (auch wenn ein Stein sie aufhält, sofern sie lang genug sind)
+  const side = tip.kind === 'branch' && (reached || tip.len > 25);
+  const wantRoom = tip.kind === 'queen' || tip.kind === 'stub' || side || (reached && Math.random() < 0.5);
   if (wantRoom && (tip.kind === 'queen' || chamberSpace(cx, cy, tip.x, tip.y))) {
     startRoom(cx, cy, tip.kind === 'queen', tip.x, tip.y);
   }
@@ -324,7 +326,9 @@ function chamberSpace(cx, cy, ax, ay) {
   for (let y = Math.floor(cy - 9); y <= cy + 3; y++) {
     for (let x = Math.floor(cx - 12); x <= cx + 12; x++) {
       if (x < 2 || y < SURFACE_Y + 4 || x >= W - 2 || y >= H - 2) return false;
-      if (Math.hypot(x - ax, y - ay) < 7) continue;
+      // der eigene Zugangsgang (hinter dem Eingang der Kammer) zählt nicht
+      const d = Math.hypot(x - ax, y - ay), behind = (x - ax) * (cx - ax) + (y - ay) * (cy - ay) < 0;
+      if (d < 7 || (behind && d < 15)) continue;
       if (knownTunnel(x, y)) n++;
     }
   }
@@ -367,16 +371,19 @@ function digRoomStep(tip, ax, ay, budget) {
   return n;
 }
 
+// Die Königskammer bleibt ein eigener, ruhiger Raum: dort beginnen keine neuen Gänge
+const nearRoyal = p => world.royal && Math.hypot(p[0] - world.royal.cx, (p[1] - world.royal.cy) * 1.3) < 30;
+
 // Neue Grabstellen nach dem Bauplan: erst tief, dann (mit größerem Nest) in die Breite
 function updatePlan(dt) {
   if (!world.royal || world.dug >= MAX_DUG) return;
   const nest = 1 + world.dug / 500;
   const busy = world.tips.filter(t => t.kind !== 'room').length;
   // Abzweig
-  if (busy < Math.min(1 + nest / 8, 5) && world.pts.length > 20 && Math.random() < dt * 0.25 * Math.min(1, nest / 6)) {
+  if (busy < Math.min(2 + nest / 6, 6) && world.pts.length > 20 && Math.random() < dt * 0.4 * Math.min(1, nest / 4)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];
-    if (!world.branchStarts.some(b => Math.hypot(b[0] - p[0], b[1] - p[1]) < 16)) {
-      const sd = Math.random() < 0.5 ? -1 : 1, dir = p[2] + sd * rand(1, 1.6);
+    if (!nearRoyal(p) && !world.branchStarts.some(b => Math.hypot(b[0] - p[0], b[1] - p[1]) < 28)) {
+      const sd = Math.random() < 0.5 ? -1 : 1, dir = p[2] + sd * rand(1.2, 1.7);   // eher waagerecht nach außen
       let free = true;
       for (let dd = 6; dd <= PLAN.spread + 8; dd += 2) {
         const qx = Math.round(p[0] + Math.cos(dir) * dd), qy = Math.round(p[1] + Math.sin(dir) * dd);
@@ -384,23 +391,24 @@ function updatePlan(dt) {
       }
       if (free) {
         world.branchStarts.push(p);
-        const deep = Math.random() < Math.max(0.15, 0.7 - nest / 30);
-        world.tips.push(newTip(p[0], p[1], dir, rand(30, 120), deep ? 'deep' : 'branch'));
+        // meist ein langer Seitengang nach außen, selten einer in die Tiefe
+        const deep = Math.random() < 0.2;
+        world.tips.push(newTip(p[0], p[1], dir, deep ? rand(30, 90) : rand(60, 150), deep ? 'deep' : 'branch'));
       }
     }
   }
-  // Seitenkammer über einen kurzen Stummel
-  if (world.tips.length < 2 + nest / 4 && world.pts.length > 30 && Math.random() < dt * 0.3 * Math.min(1, nest / 4)) {
+  // Seitenkammer über einen kurzen Stummel – nur draußen an Seitengängen, nicht am Hauptschacht
+  if (world.tips.length < 2 + nest / 4 && world.pts.length > 30 && Math.random() < dt * 0.12 * Math.min(1, nest / 4)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];
     const sd = Math.random() < 0.5 ? -1 : 1, dir = p[2] + sd * Math.PI / 2 * rand(0.8, 1.2) - 0.2 * sd;
     const cx = p[0] + Math.cos(dir) * (PLAN.stub + 10), cy = p[1] + Math.sin(dir) * (PLAN.stub + 3);
-    if (chamberSpace(cx, cy, p[0], p[1])) world.tips.push(newTip(p[0], p[1], dir, PLAN.stub, 'stub'));
+    if (Math.abs(p[0] - world.entranceX) >= 35 && !nearRoyal(p) && chamberSpace(cx, cy, p[0], p[1])) world.tips.push(newTip(p[0], p[1], dir, PLAN.stub, 'stub'));
   }
   // Gräbt gerade niemand mehr: an der tiefsten Stelle neu ansetzen
   if (!world.tips.length && world.pts.length && Math.random() < dt * 0.5) {
-    let d = world.pts[0];
-    for (const p of world.pts) if (p[1] > d[1]) d = p;
-    world.tips.push(newTip(d[0], d[1], Math.PI / 2 + rand(-0.4, 0.4), rand(40, 100), 'deep'));
+    let d = null;
+    for (const p of world.pts) if (!nearRoyal(p) && (!d || p[1] > d[1])) d = p;
+    if (d) world.tips.push(newTip(d[0], d[1], Math.PI / 2 + rand(-0.4, 0.4), rand(40, 100), 'deep'));
   }
 }
 

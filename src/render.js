@@ -168,7 +168,9 @@ function itemImage(it, now) {
 const itemScale = it => {
   const k = it.caste ? BROOD_SIZE[it.caste] : 1;
   if (it.kind === 'larva') return k * (0.7 + 0.4 * Math.min(1, it.fed / LARVA_FEEDS));
-  return it.kind === 'cocoon' ? k : 1;
+  if (it.kind === 'cocoon') return k;
+  // Futter größer zeichnen, damit der Vorrat gut zu sehen ist
+  return it.kind === 'leaf' || it.kind === 'petal' || it.kind === 'seed' || it.kind === 'meat' ? 1.6 : 1;
 };
 
 // Brut und Futter, die am Boden liegen

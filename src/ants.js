@@ -131,7 +131,7 @@ function decide(a) {
   // Erst schauen, ob die Kolonie etwas braucht (Futter, Brut, Königin), sonst graben
   if (Math.random() < 0.9 && colonyTask(a)) return;
   // Eine Grabstelle aussuchen, an der noch Platz ist
-  const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' || t.kind === 'queen' ? 6 : 4));
+  const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' ? 8 : t.kind === 'queen' ? 6 : 4));
   if (open.length && Math.random() < 0.85) {
     const tip = open[randInt(0, open.length - 1)];
     const [fx, fy] = tipFront(tip);
@@ -160,9 +160,9 @@ function queenDecide(a) {
       if (setPath(a, goal)) { a.state = 'toRoyal'; a.lost = false; return; }
       a.lost = isUnderground(a.x, a.y);   // kein Weg hinein: dann eben hier im Nest bleiben
     } else {
-      // Meist ruhig in der Kammer liegen, ab und zu ein paar Schritte
-      if (Math.random() < 0.7) { a.state = 'rest'; a.timer = rand(3, 8); return; }
-      wander(a, 120);
+      // Die Königin liegt still in ihrer Kammer, wird gefüttert und legt Eier
+      a.state = 'rest';
+      a.timer = rand(8, 15);
       return;
     }
   }

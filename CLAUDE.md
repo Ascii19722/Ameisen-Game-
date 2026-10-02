@@ -46,8 +46,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Schwerkraft: Eier, Larven, Kokons (und später Futter), die abgelegt werden, fallen nach unten
   und bleiben auf dem Kammerboden oder aufeinander liegen (rutschen schräg ab wie Sand).
 - Brut: Ei = Nr. 2 (cremefarben 244,232,200, oval). Kokon = Nr. 13 (beige, wie fieldnotes). Larve: offen.
-- Gang-Stil: erste 16 Ideen abgelehnt. In beiden Videos sind die Gänge schmal (Ameise so breit wie der Gang);
-  neue 40 Ideen gezeigt (ants.sim: halbdurchsichtig, Pilz-Kammern; fieldnotes: Kugel-Kette, Netz, farbige Kammern).
+- Gang-Stil = G31 (ants.sim-Form, halbdurchsichtiges Braun, Ameisen-Laufspur, Sandkrümel, BRÖCKLIGER Rand
+  mit ausgebrochenen Stücken). Gänge größer (ca. 4 Pixel), Kammern größer (ca. 1,4×) und klar umrissen.
+  WICHTIG: nichts perfekt rund – Kammern schief und beulig, Boden leicht krumm, Gangbreite schwankt
+  (gegraben hat immer Macken). Genaue Variante aus dem Bogen „G31 unregelmäßig“ steht noch aus.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

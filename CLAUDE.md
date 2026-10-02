@@ -33,7 +33,10 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `electron/main.js` + `package.json` – Start als Programm (.exe); `build-exe.sh` baut die Windows-ZIP
   (lädt fertiges Electron herunter, kein npm install nötig). `Windows-installieren.bat` (+ .ps1) macht
   dasselbe direkt beim Nutzer unter Windows und legt eine Verknüpfung auf den Desktop.
-  UPDATES für den Nutzer: `./build-update-bat.sh` baut `dist/Ameisen-Sim-Update.bat` (Spiel steckt als Base64
+  AUTO-UPDATE: `Ameisen-Sim aktualisieren.bat` (liegt beim Nutzer auf dem Desktop) holt bei jedem Doppelklick den
+  Stand des Zweigs claude/new-session-n7qdgx von GitHub (privat → einmalig Token mit Contents: Read-only, gespeichert in
+  %LOCALAPPDATA%\Ameisen-Sim-Token.txt). Darum nach jeder Änderung PUSHEN, dann hat der Nutzer sie.
+  Alternative UPDATES für den Nutzer: `./build-update-bat.sh` baut `dist/Ameisen-Sim-Update.bat` (Spiel steckt als Base64
   darin, ~60 KB) – diese EINE Datei schicken; Doppelklick installiert/aktualisiert, Spielstand bleibt.
 
 ## Optik

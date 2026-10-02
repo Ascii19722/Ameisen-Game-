@@ -57,6 +57,9 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   sich selten mit anderen Gängen, und gräbt am Ende eine Kammer aus vielen kleinen Grab-Bewegungen
   (Boden wird flachgetreten). Siehe Vorschau-Bogen „Selbst gegraben“. Die aktuelle Gangplanung in
   world.js (Zickzack-Plan) muss dafür in Stufe 3 ersetzt werden.
+- Bauablauf wie ants.sim (Details: START.md, „Wie die Vorbilder ihre Gänge bauen“): langer Bogen →
+  Haken + Königskammer → zweiter Bogen trifft den ersten (Schleife) → Seitenkammern nach außen →
+  Stamm mit Ästen nach unten.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

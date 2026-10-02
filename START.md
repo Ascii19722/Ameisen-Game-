@@ -42,6 +42,31 @@ Tasten:
   6. **Wetter**: Regen und Nacht (rein optisch).
   7. Zwei Sandhaufen links und rechts vom Eingang.
 
+
+## Wie die Vorbilder ihre Gänge bauen (Video-Analyse)
+
+**ants.sim** (Tag für Tag im Video beobachtet) – danach bauen wir:
+1. Tag 1–4: Die Königin gräbt allein **einen langen, ruhigen Bogen** schräg nach unten (keine Kammer!).
+   Er krümmt sich gleichmäßig, wackelt kaum.
+2. Am Ende des Bogens ein **Haken** (Gang biegt stärker um), dort die **erste Kammer** (Königskammer).
+3. Tag 8–11: Ein **zweiter Bogen** startet direkt neben dem Eingang, schwingt zur anderen Seite aus und
+   biegt zurück, bis er den ersten Bogen unten **trifft** → herzförmige Schleife.
+4. Danach entstehen **Seitenkammern**: an einem fertigen Gang ein kurzer Stummel nach **außen**, dann eine
+   Pilz-Kammer (flacher Boden, runde Decke). Kammern liegen immer außen, nie in der Schleife.
+5. Tag 15+: Vom unteren Treffpunkt wächst ein **Stamm** weiter nach unten, von dem **Äste** schräg
+   abgehen, jeweils mit Kammer am Ende; überall kommen weitere Seitenkammern dazu.
+6. Steinen wird in weitem Bogen ausgewichen. Gänge sind schmal (Ameise so breit wie der Gang),
+   viel befahrene Gänge bekommen dunkle Laufspuren.
+7. Zuerst wird lang erkundet, Kammern kommen erst danach – das Nest wächst mit der Zahl der Ameisen.
+
+**fieldnotes** (zum Vergleich):
+1. Königin gräbt einen kurzen Schacht, unten sofort die Königskammer.
+2. Dann lange, **fast gerade waagrechte Gänge** links und rechts auf Höhe der Königskammer, dazu
+   senkrechte Schächte; viele Gänge enden mit einem kleinen Haken nach unten (Erkundung).
+3. Vorratskammern entstehen dicht um die Königskammer, später weiter außen; Gänge verbinden sich zu
+   einem Netz mit vielen Schleifen. Später werden neue Eingänge von oben gegraben.
+4. Zwei große Sandhaufen links und rechts vom Eingang wachsen mit dem Nest.
+
 ## Prompt für die nächste Stufe
 > Lies CLAUDE.md und START.md. Baue Stufe 3 nach dem Spielablauf von fieldnotes.sim
 > (Abschnitt "Vorbilder", Punkte 1–4): Gründung durch die Königin, Königskammer, Eier → Larven →

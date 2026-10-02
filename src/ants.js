@@ -62,7 +62,7 @@ function createAnt(x, y, caste) {
     rot: 0,                 // Drehung des Körpers (Füße zeigen zum Boden)
     face: 1,                // 1 = schaut nach „vorne“ entlang des Bodens, -1 = andersherum
     turn: 0,                // Restzeit der Umdreh-Bewegung
-    speed: caste === 'queen' ? 3 : rand(6, 9),
+    speed: caste === 'queen' ? 3 : caste === 'nurse' ? rand(5, 7) : rand(6, 9),
     state: 'rest',
     timer: rand(0, 2),
     tip: null,
@@ -115,6 +115,15 @@ function decide(a) {
   a.tip = null;
   if (a.job) { dropLoad(a); endJob(a); }
   if (a.caste === 'queen') { queenDecide(a); return; }
+  if (a.caste === 'soldier') { soldierDecide(a); return; }
+  if (a.caste === 'nurse') {   // Pflegerin: bei der Brut bleiben, selten graben
+    if (colonyTask(a)) return;
+    if (Math.random() < 0.8) {
+      if (Math.random() < 0.5) { a.state = 'rest'; a.timer = rand(1, 4); return; }
+      wander(a, 150);
+      return;
+    }
+  }
   // Erst schauen, ob die Kolonie etwas braucht (Futter, Brut, Königin), sonst graben
   if (Math.random() < 0.9 && colonyTask(a)) return;
   // Eine Grabstelle aussuchen, an der noch Platz ist
@@ -152,6 +161,21 @@ function queenDecide(a) {
   }
   a.state = 'rest';
   a.timer = rand(1, 3);
+}
+
+// Soldatin: bewacht den Eingang, läuft oben und im oberen Gang Streife
+function soldierDecide(a) {
+  const ex = world.entranceX;
+  if (Math.random() < 0.5) {
+    const tx = ex + randInt(-25, 25), top = columnTop(tx);
+    const goal = bfs(idx(a.x, a.y), i => {
+      const x = i % W, y = (i / W) | 0;
+      return Math.abs(x - tx) <= 2 && y < top && y >= top - 2;
+    }, N);
+    if (setPath(a, goal)) { a.state = 'guard'; return; }
+  }
+  if (Math.random() < 0.5) { a.state = 'rest'; a.timer = rand(3, 8); return; }
+  wander(a, 300);
 }
 
 function wander(a, nodes) {

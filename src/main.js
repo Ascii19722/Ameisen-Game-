@@ -70,6 +70,7 @@ window.addEventListener('keydown', e => {
   if (e.key === '+' || e.key === '=') zoomAt(1.25, canvas.width / 2, canvas.height / 2);
   if (e.key === '-') zoomAt(0.8, canvas.width / 2, canvas.height / 2);
   if (e.key === '0') resetCam();
+  if (e.key === 'n' || e.key === 'N') askNewColony();
   keys.add(e.key.toLowerCase());
 });
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -106,7 +107,7 @@ function drawHud() {
   const x = Math.round(24 * u), y = Math.round(24 * u);
   const big = `${ants.length} AMEISEN · ${broodCount()} BRUT · ${foodCount()} FUTTER`;
   ctx.font = `700 ${Math.round(26 * u)}px system-ui, sans-serif`;
-  const w = Math.max(ctx.measureText(big).width + 40 * u, 360 * u), h = 92 * u;
+  const w = Math.max(ctx.measureText(big).width + 40 * u, 560 * u), h = 92 * u;
 
   ctx.fillStyle = 'rgba(240, 233, 220, 0.94)';
   roundRect(x, y, w, h, 10 * u);
@@ -119,7 +120,8 @@ function drawHud() {
   ctx.fillStyle = '#7a6a5a';
   ctx.font = `600 ${Math.round(15 * u)}px system-ui, sans-serif`;
   ctx.textAlign = 'left';
-  ctx.fillText('KOLONIE', x + 20 * u, y + 28 * u);
+  const nS = ants.filter(a => a.caste === 'soldier').length, nP = ants.filter(a => a.caste === 'nurse').length;
+  ctx.fillText(`KOLONIE · ${nS} SOLDATINNEN · ${nP} PFLEGERINNEN`, x + 20 * u, y + 28 * u);
   ctx.textAlign = 'right';
   ctx.fillText(`Tag ${sky.day} · ${clockText()}${paused ? ' · Pause' : ''}${speed > 1 ? ' · ' + speed + '×' : ''}`,
     x + w - 20 * u, y + 28 * u);
@@ -139,7 +141,7 @@ function drawHud() {
   // Tastenhilfe klein unten links
   ctx.font = `${Math.round(13 * u)}px system-ui, sans-serif`;
   ctx.fillStyle = 'rgba(60, 45, 35, 0.6)';
-  ctx.fillText('Mausrad/+−: Zoom · Ziehen/Pfeile/WASD: verschieben · 0: zurück · Leertaste: Pause · 1–4: Tempo · F: Vollbild',
+  ctx.fillText('Mausrad/+−: Zoom · Ziehen/Pfeile/WASD: verschieben · 0: zurück · N: neue Kolonie · Leertaste: Pause · 1–4: Tempo · F: Vollbild',
     16 * u, canvas.height - 14 * u);
 }
 
@@ -154,12 +156,25 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+// Neue Kolonie nur nach Rückfrage – das alte Nest ist danach weg
+function askNewColony() {
+  if (!confirm('Neue Kolonie starten? Das jetzige Nest geht dabei verloren.')) return;
+  newColony();
+  resetCam();
+}
+document.getElementById('neu').addEventListener('click', e => { e.currentTarget.blur(); askNewColony(); });
+
+// Start: gespeicherte Kolonie laden, sonst eine neue gründen
 generateWorld();
 resetColony();
 generateSky();
 spawnAnts();
+loadGame();
 resetCam();
+setInterval(saveGame, 20000);
+window.addEventListener('beforeunload', saveGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 requestAnimationFrame(frame);
 
 // Für Tests in der Konsole
-window.sim = { world, ants, colony, sky, cam, step, render: () => render(ctx, canvas.width, canvas.height, cam), zoomAt, resetCam };
+window.sim = { world, ants, colony, saveGame, loadGame, newColony, sky, cam, step, render: () => render(ctx, canvas.width, canvas.height, cam), zoomAt, resetCam };

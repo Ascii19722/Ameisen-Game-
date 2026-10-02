@@ -24,6 +24,7 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `src/sprites.js` – Ameisen-Bilder von der Seite (Laufbilder je Sorte, vorgezeichnet)
 - `src/sky.js` – Himmel, Sonne/Mond, Sterne, Wolken, Wald, Tageszeit
 - `src/render.js` – Zeichnen (Pixel-Art, ein Pixel = eine Zelle, dann hochskaliert)
+- `src/save.js` – Speichern im Browser (localStorage), „Neue Kolonie“
 - `src/main.js` – Start, Spielschleife, Tasten, HUD
 
 ## Optik

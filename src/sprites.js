@@ -25,6 +25,13 @@ const CASTES = {
   queen: { size: 2.1, body: C.black, shine: C.shine, leg: C.leg, far: C.far,
     gW: 1.35, gL: 1.6, thW: 1.2, headW: 1.05, headL: 1, legLen: 1, eye: 1.3,
     thorax: 'queen', stubs: true, plates: 5, ocelli: true },
+  // Soldatin S17: grau, groß, riesiger eckiger Kopf, Säbel-Kiefer, zwei Knoten
+  soldier: { size: 1.75, body: C.grey, shine: C.greyShine, leg: C.greyLeg, far: C.greyFar,
+    gW: 0.95, gL: 1, thW: 0.95, headW: 1.6, headL: 1.4, legLen: 0.95, eye: 0.9,
+    headSquare: true, saber: 1.3, nodes: 2 },
+  // Pflegerin P7: grau, klein
+  nurse: { size: 1.05, body: C.grey, shine: C.greyShine, leg: C.greyLeg, far: C.greyFar,
+    gW: 0.9, gL: 1, thW: 0.9, headW: 0.95, headL: 1, legLen: 1.05, eye: 0.8 },
 };
 
 function sPoly(g, p) {
@@ -100,8 +107,11 @@ function drawSideAnt(g, ph, p, carry) {
     g.restore();
     g.fillStyle = rgbCss(p.body);
   }
-  // Knoten
-  sPoly(g, sEll(-0.45, by - 0.12, 0.17, 0.24));
+  // Knoten (Soldatin: zwei)
+  if (p.nodes === 2) {
+    sPoly(g, sEll(-0.58, by - 0.1, 0.13, 0.2));
+    sPoly(g, sEll(-0.36, by - 0.14, 0.14, 0.22));
+  } else sPoly(g, sEll(-0.45, by - 0.12, 0.17, 0.24));
   // Brust
   const t = p.thW;
   if (p.thorax === 'queen') {   // große, gewölbte Flugbrust mit Abschnitten und Flügelnarbe
@@ -118,9 +128,16 @@ function drawSideAnt(g, ph, p, carry) {
       0.4, by + 0.18, -0.05, by + 0.2]);
   }
   // Kopf und Kiefer
-  sPoly(g, sEll(hx, hy, 0.42 * p.headL, 0.36 * p.headW, 0.25));
+  if (p.headSquare) {   // großer eckiger Kopf
+    const L = 0.46 * p.headL, Hh = 0.36 * p.headW;
+    sPoly(g, [hx - L, hy - Hh * 0.7, hx - L * 0.6, hy - Hh, hx + L * 0.7, hy - Hh, hx + L, hy - Hh * 0.5,
+      hx + L, hy + Hh * 0.6, hx + L * 0.6, hy + Hh, hx - L * 0.5, hy + Hh * 0.9, hx - L, hy + Hh * 0.4]);
+  } else sPoly(g, sEll(hx, hy, 0.42 * p.headL, 0.36 * p.headW, 0.25));
   g.fillStyle = rgbCss(p.leg);
-  sPoly(g, [hx + 0.32 * p.headL, hy + 0.08, hx + 0.57 * p.headL, hy + 0.2, hx + 0.3 * p.headL, hy + 0.26]);
+  if (p.saber) {   // lange, offene Säbel-Kiefer, Spitze nach innen
+    const j = p.saber, x0 = hx + 0.4 * p.headL;
+    sPoly(g, [x0, hy + 0.05, x0 + 0.55 * j, hy - 0.12, x0 + 0.85 * j, hy + 0.18, x0 + 0.7 * j, hy + 0.2, x0 + 0.45 * j, hy + 0.06, x0 - 0.02, hy + 0.22]);
+  } else sPoly(g, [hx + 0.32 * p.headL, hy + 0.08, hx + 0.57 * p.headL, hy + 0.2, hx + 0.3 * p.headL, hy + 0.26]);
   // Glanz, Auge, Punktaugen
   g.fillStyle = rgbCss(p.shine);
   sPoly(g, sEll(gx + 0.15, gy - 0.38 * p.gW, 0.42 * p.gL, 0.12, gr, 10));

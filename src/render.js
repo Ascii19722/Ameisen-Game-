@@ -165,7 +165,11 @@ function itemImage(it, now) {
   return frames.length > 1 ? frames[Math.floor(now / 160 + it.ph) % frames.length] : frames[0];
 }
 // Larven wachsen beim Füttern
-const itemScale = it => it.kind === 'larva' ? 0.7 + 0.4 * Math.min(1, it.fed / LARVA_FEEDS) : 1;
+const itemScale = it => {
+  const k = it.caste ? BROOD_SIZE[it.caste] : 1;
+  if (it.kind === 'larva') return k * (0.7 + 0.4 * Math.min(1, it.fed / LARVA_FEEDS));
+  return it.kind === 'cocoon' ? k : 1;
+};
 
 // Brut und Futter, die am Boden liegen
 function drawItems(g, cam, cw, ch, now) {

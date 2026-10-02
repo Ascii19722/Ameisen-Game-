@@ -16,6 +16,11 @@ const MAX_ANTS = 1000;
 // Platz am Kammerboden in Welt-Pixeln: Abstand nebeneinander und Höhe beim Stapeln
 const ITEM_W = { egg: 2, larva: 4, cocoon: 4, leaf: 2, petal: 2, seed: 2 };
 const ITEM_H = { egg: 0.8, larva: 0.9, cocoon: 1.6, leaf: 0.7, petal: 0.7, seed: 0.7 };
+// Brut-Größe je Sorte (Pflegerin < Arbeiterin < Soldatin)
+const BROOD_SIZE = { nurse: 0.8, worker: 1, soldier: 1.35 };
+// Gewünschter Anteil der Sorten an der Kolonie
+const CASTE_SHARE = { nurse: 0.15, soldier: 0.08 };
+
 const SOURCE_FOOD = { plant: 'leaf', flower: 'petal', seeds: 'seed' };
 
 // Kammer-Aufgaben in der Reihenfolge, in der sie gebraucht werden
@@ -175,12 +180,25 @@ function larvaHungry(l) {
 // ---------- Aufgaben der Arbeiterinnen ----------
 // Jede Aufgabe hat zwei Teile: etwas holen (fetch) und es irgendwo abgeben (deliver).
 
+// Welche Sorte wird aus dem neuen Ei? Die, von der gerade am meisten fehlt.
+function chooseCaste() {
+  const n = ants.length + colony.brood.length;
+  if (n < 20) return Math.random() < 0.2 ? 'nurse' : 'worker';
+  const have = c => ants.filter(a => a.caste === c).length + colony.brood.filter(b => b.caste === c).length;
+  const lackN = CASTE_SHARE.nurse - have('nurse') / n, lackS = CASTE_SHARE.soldier - have('soldier') / n;
+  if (lackN > 0 && lackN >= lackS && Math.random() < 0.6) return 'nurse';
+  if (lackS > 0 && Math.random() < 0.6) return 'soldier';
+  return 'worker';
+}
+
+// Pflegerinnen kümmern sich nur um Königin und Brut, Arbeiterinnen machen alles
 function colonyTask(a) {
   if (!world.royal) return false;
+  const nurse = a.caste === 'nurse';
   const queen = ants.find(q => q.caste === 'queen');
   // 1. Die Königin hat Hunger
   const feeders = ants.filter(b => b.job && b.job.type === 'queen').length;
-  if (queen && colony.queenFood < 2 && feeders < (colony.queenFood < 1 ? 2 : 1)) {
+  if (queen && colony.queenFood < 3 && feeders < (colony.queenFood < 1 ? 3 : 2)) {
     const f = freeFood();
     if (f && startJob(a, { type: 'queen', item: f, queen })) return true;
   }
@@ -194,6 +212,7 @@ function colonyTask(a) {
     const l = colony.brood.find(larvaHungry), f = l && freeFood();
     if (f && startJob(a, { type: 'larva', item: f, larva: l })) return true;
   }
+  if (nurse) return false;
   // 4. Loses Futter in die Vorratskammer bringen
   if (Math.random() < 0.5) {
     const f = colony.food.find(it => !it.by && !it.claim && misplaced(it));
@@ -298,7 +317,7 @@ function jobTimer(a) {
   const it = a.load;
   a.load = null;
   if (j.type === 'queen') {
-    colony.queenFood += 1;
+    colony.queenFood += 2;   // ein großes Stück reicht für zwei Mahlzeiten
     removeItem(it);
   } else if (j.type === 'larva') {
     if (colony.brood.includes(j.larva) && j.larva.kind === 'larva') { j.larva.fed++; j.larva.lastFed = j.larva.age; }
@@ -325,7 +344,7 @@ function updateColony(dt) {
       colony.layTimer = LAY_GAP * rand(0.8, 1.2);
       if (colony.queenFood > 0.5 && colony.brood.length < 6 + ants.length * 0.5 && ants.length < MAX_ANTS) {
         colony.queenFood -= 0.25;
-        const egg = { kind: 'egg', age: 0, fed: 0, lastFed: -999, by: null, claim: null, feeder: null, ph: Math.random() * 8 };
+        const egg = { kind: 'egg', caste: chooseCaste(), age: 0, fed: 0, lastFed: -999, by: null, claim: null, feeder: null, ph: Math.random() * 8 };
         colony.brood.push(egg);
         dropLoose(egg, queen.x, queen.y);
         egg.room = r;   // liegt bei der Königin, bis jemand es abholt
@@ -343,7 +362,7 @@ function updateColony(dt) {
     } else if (b.kind === 'cocoon' && b.age >= COCOON_TIME && !b.claim) {
       colony.brood.splice(k, 1);
       const by = Math.round(b.y);
-      if (world.cells[idx(b.x, by)] === AIR && ants.length < MAX_ANTS) ants.push(createAnt(b.x, by, 'worker'));
+      if (world.cells[idx(b.x, by)] === AIR && ants.length < MAX_ANTS) ants.push(createAnt(b.x, by, b.caste || 'worker'));
     }
   }
   // Abgeerntete Pflanzen verschwinden, neue wachsen nach

@@ -57,10 +57,17 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   sich selten mit anderen Gängen, und gräbt am Ende eine Kammer aus vielen kleinen Grab-Bewegungen
   (Boden wird flachgetreten). Siehe Vorschau-Bogen „Selbst gegraben“. Die aktuelle Gangplanung in
   world.js (Zickzack-Plan) muss dafür in Stufe 3 ersetzt werden.
-- Bauablauf wie ants.sim (Details: START.md, „Wie die Vorbilder ihre Gänge bauen“): langer Bogen →
-  Haken + Königskammer → zweiter Bogen trifft den ersten (Schleife) → Seitenkammern nach außen →
-  Stamm mit Ästen nach unten. Gänge halten deutlich Abstand zueinander (Favorit: Bogen „Bild 6
-  weiterentwickelt“ Nr. 6). Kammern flach und mehrlappig, oben groß, unten kleiner (echte Nester).
+- KEIN fest programmierter Bauablauf (keine vorgegebenen Bögen/Schleifen)! Es gibt nur einen BAUPLAN aus
+  Neigungen; jede grabende Ameise entscheidet selbst. Jedes Nest wird anders. Regeln (Wahrscheinlichkeiten):
+  * Königin gräbt am Eingang los, eher nach unten, wackelt leicht; irgendwann gräbt sie die erste Kammer.
+  * Gangspitzen wackeln zufällig, haben leichte Neigung (Königin: nach unten; Äste: zur Seite, leicht abwärts).
+  * Abstand halten: Gänge weichen anderen Gängen aus; stößt ein Gang auf einen anderen, hört er meist auf
+    (selten Durchbruch = Schleife). Steinen wird ausgewichen.
+  * Je größer die Kolonie, desto öfter neue Abzweige (aber nur wo vorne Platz ist, mit Abstand zu anderen Abzweigen).
+  * Am Gangende manchmal eine Kammer; Seitenkammern über kurzen Stummel – nur wo genug Platz ist
+    (Mindestabstand zu anderen Kammern und Gängen).
+  Vorschau: Bogen „Selbst gegraben nach Bauplan-Regeln“ (Nest A/B im Zeitraffer).
+  Später ggf. ergänzen: Kammern dort, wo Brut abgelegt wird (echte Ameisen).
 - Kammern NICHT dicht aneinander: wie im ants.sim-Video klein und rund (ca. 3–4× Gangbreite),
   zwischen zwei Kammern mindestens eine Kammerbreite Sand (Mindestabstand), Kammern am Ende von
   Ästen oder an Knicken, an einem kurzen Stummel. Viel freier Sand rund ums Nest.

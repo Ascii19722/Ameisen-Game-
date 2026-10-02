@@ -38,14 +38,16 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   Flügelstummel) mit langem Hinterleib (Länge 1.7) aus 5 schwarzen Platten mit breiten, leicht
   gebogenen braunen Fugen (Farbe 96,58,36). Hinterleib vorne abgerundet und hinten rund.
   Zwischen Brust und Hinterleib EIN dicker runder Knoten statt eines dünnen Strichs.
-- Soldatin: Säbel-Kiefer (lang, offen, Spitzen nach innen). Favoriten S11 (schwarz) und S17 (grau-schwarz);
-  Vorschlag: S11 = normale Soldatin, S17 = große Wächterin – Entscheidung steht noch aus.
+- Soldatin = Nr. 2 aus dem 20er-Bogen = S17: grau-schwarz (52,48,50), Säbel-Kiefer (lang, offen, Spitzen
+  nach innen), Größe 1.65, großer Kopf (1.55 breit, 1.3 lang), zwei Knoten, kräftige Beine.
 - Pflegerin = P7: grau-schwarz (Körper 52,48,50 / Glanz 112,106,110 / Beine 40,38,40), klein (Größe 1.05, Hinterleib 0.9).
 - Junge Königin (Flieger) = P11: schwarz, Größe 1.85, Flügel, zwei Knoten.
 - Männchen = P27: grau-schwarz, schlank (Größe 1.45, kleiner Kopf 0.75), Flügel.
 - Schwerkraft: Eier, Larven, Kokons (und später Futter), die abgelegt werden, fallen nach unten
   und bleiben auf dem Kammerboden oder aufeinander liegen (rutschen schräg ab wie Sand).
-- Gang-Stil: Auswahl aus G1–G16 steht noch aus.
+- Brut: Ei = Nr. 2 (cremefarben 244,232,200, oval). Kokon = Nr. 13 (beige, wie fieldnotes). Larve: offen.
+- Gang-Stil: erste 16 Ideen abgelehnt. In beiden Videos sind die Gänge schmal (Ameise so breit wie der Gang);
+  neue 40 Ideen gezeigt (ants.sim: halbdurchsichtig, Pilz-Kammern; fieldnotes: Kugel-Kette, Netz, farbige Kammern).
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

@@ -89,6 +89,8 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - Seitenansicht: Ameisen gibt es auch von der Seite (Querschnitt = wir schauen seitlich ins Nest).
   Seiten-Modell für Königin (R13), Arbeiterin (A11), Soldatin (S17), Pflegerin (P7), 3 Haltungen
   (flach / hoch / Hinterleib hoch) – Auswahl und wann Seiten- vs. Draufsicht steht noch aus.
+- Laufen: deutlicher Dreifuß-Gang (je 3 Beine heben sich, schwingen nach vorne, setzen auf; die anderen
+  3 schieben), Knie knicken, Füße heben sich sichtbar, Körper wippt leicht, Fühler tasten.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

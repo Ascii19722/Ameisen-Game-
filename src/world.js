@@ -312,7 +312,7 @@ function endTip(tip, reached) {
   if (tip.through) return;
   const cx = tip.x + Math.cos(tip.dir) * 6, cy = tip.y + Math.sin(tip.dir) * 2;
   // Seitengänge enden fast immer in einer Kammer (auch wenn ein Stein sie aufhält, sofern sie lang genug sind)
-  const side = tip.kind === 'branch' && (reached || tip.len > 25);
+  const side = tip.kind === 'branch' && (reached || tip.len > 25) && Math.random() < 0.6;   // nicht jeder Gang braucht eine Kammer
   const wantRoom = tip.kind === 'queen' || tip.kind === 'stub' || side || (reached && Math.random() < 0.5);
   if (wantRoom && (tip.kind === 'queen' || chamberSpace(cx, cy, tip.x, tip.y))) {
     startRoom(cx, cy, tip.kind === 'queen', tip.x, tip.y);
@@ -381,11 +381,14 @@ function updatePlan(dt) {
   const busy = world.tips.filter(t => t.kind !== 'room').length;
   // Abzweig
   // Seitengänge gibt es schon früh, während die Königin noch nach unten gräbt (Nutzerwunsch: erst zur Seite)
-  if (busy < (world.royal ? Math.min(2 + nest / 6, 6) : 2) && world.pts.length > 20 && Math.random() < dt * 0.4 * Math.min(1, nest / 3)) {
+  if (busy < (world.royal ? Math.min(3 + nest / 4, 10) : 2) && world.pts.length > 20 && Math.random() < dt * 0.8 * Math.min(1, nest / 3)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];
-    if (!nearRoyal(p) && !world.branchStarts.some(b => Math.hypot(b[0] - p[0], b[1] - p[1]) < 36)) {
+    if (!nearRoyal(p) && !world.branchStarts.some(b => Math.hypot(b[0] - p[0], b[1] - p[1]) < 24)) {
       // fast waagerecht nach links oder rechts, nur leicht abwärts
-      const sd = Math.random() < 0.5 ? -1 : 1, dir = sd > 0 ? rand(0.03, 0.25) : Math.PI - rand(0.03, 0.25);
+      const sd = Math.random() < 0.5 ? -1 : 1;
+      let dir = sd > 0 ? rand(0.03, 0.25) : Math.PI - rand(0.03, 0.25);
+      // Von einem waagerechten Gang zweigt ein schräger ab (meist nach unten)
+      if (Math.abs(Math.sin(p[2])) < 0.5) dir = p[2] + (Math.random() < 0.75 ? 1 : -1) * Math.sign(Math.cos(p[2]) || 1) * rand(0.6, 1.1);
       let free = true;
       for (let dd = 6; dd <= PLAN.spread + 8; dd += 2) {
         const qx = Math.round(p[0] + Math.cos(dir) * dd), qy = Math.round(p[1] + Math.sin(dir) * dd);
@@ -394,7 +397,7 @@ function updatePlan(dt) {
       if (free) {
         world.branchStarts.push(p);
         // meist ein langer Seitengang nach außen, selten einer in die Tiefe
-        const deep = world.royal && Math.random() < 0.1;
+        const deep = world.royal && Math.random() < 0.15;
         world.tips.push(newTip(p[0], p[1], dir, deep ? rand(30, 90) : rand(60, 150), deep ? 'deep' : 'branch'));
       }
     }

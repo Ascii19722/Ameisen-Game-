@@ -134,8 +134,11 @@ function decide(a) {
   const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' ? 8 : t.kind === 'queen' ? 6 : 4));
   if (open.length && Math.random() < 0.85) {
     // Der Schacht der Königin hat Vorrang, bis ihre Kammer fertig ist
-    const qt = open.find(t => t.kind === 'queen');
-    const tip = qt && Math.random() < 0.7 ? qt : open[randInt(0, open.length - 1)];
+    // Angefangene Kammern werden bevorzugt fertig gegraben
+    const qt = open.find(t => t.kind === 'queen'), rooms = open.filter(t => t.kind === 'room');
+    const tip = qt && Math.random() < 0.7 ? qt
+      : rooms.length && Math.random() < 0.6 ? rooms[randInt(0, rooms.length - 1)]
+      : open[randInt(0, open.length - 1)];
     const [fx, fy] = tipFront(tip);
     const goal = bfs(idx(a.x, a.y), i => {
       const x = i % W, y = (i / W) | 0;

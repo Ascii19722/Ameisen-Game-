@@ -104,6 +104,16 @@
   const toWorld = (sx, sy) => [cam.x + (sx - canvas.width / 2) / cam.zoom, cam.y + (sy - canvas.height / 2) / cam.zoom];
   const pinsel = () => +document.getElementById('pinsel').value;
 
+  // Graben im Editor: geht auch durch Stein und Steinplatten (hier ist man der Baumeister)
+  function dig(cx, cy, r, floorY = Infinity) {
+    const x0 = Math.max(1, Math.floor(cx - r)), x1 = Math.min(W - 2, Math.ceil(cx + r));
+    const y0 = Math.max(SURFACE_Y - 2, Math.floor(cy - r)), y1 = Math.min(H - 2, Math.ceil(cy + r), floorY);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) world.cells[idx(x, y)] = AIR;
+    }
+    markDirty(x0 - 1, y0 - 1, x1 + 1, y1 + 1);
+  }
+
   // Zuschütten: Sand zurück in den Boden (nur unter der Oberfläche, Steine bleiben)
   function fill(cx, cy, r) {
     for (let y = Math.floor(cy - r); y <= cy + r; y++) {
@@ -132,7 +142,7 @@
     const k = PLAN.chamberSize * f, rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + ry * 0.45);
     for (let n = 0; n < Math.round(40 * f * f); n++) {
       const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
-      carve(cx + Math.cos(a) * d * rx * 0.75, floor - ry * 0.9 + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k), floor);
+      dig(cx + Math.cos(a) * d * rx * 0.75, floor - ry * 0.9 + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k), floor);
     }
     if (role === 'queen') for (let i = marks.length - 1; i >= 0; i--) if (marks[i].role === 'queen') marks.splice(i, 1);   // nur eine Königin
     marks.push({ x: cx, y: floor, role });
@@ -166,7 +176,7 @@
     last = [wx, wy];
   });
   function paint(x, y) {
-    if (tool === 'gang') carve(x, y, pinsel() * (0.9 + Math.random() * 0.2));   // leicht unregelmäßig wie gegraben
+    if (tool === 'gang') dig(x, y, pinsel() * (0.9 + Math.random() * 0.2));   // leicht unregelmäßig wie gegraben
     else if (tool === 'fuellen') fill(x, y, pinsel() + 0.5);
     else if (tool === 'huegel') huegel(x, y, pinsel() + 0.5);
   }

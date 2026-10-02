@@ -59,6 +59,16 @@ Tasten:
    viel befahrene Gänge bekommen dunkle Laufspuren.
 7. Zuerst wird lang erkundet, Kammern kommen erst danach – das Nest wächst mit der Zahl der Ameisen.
 
+**Echte Ameisennester** (Forschung von W. R. Tschinkel, Gips-/Metall-Abgüsse) – fließt mit ein:
+- Grundbaustein: mehr oder weniger senkrechter **Schacht** mit flachen, waagrechten **Kammern** daran.
+- Schächte laufen im **Zickzack/spiralförmig**, oben flach (ca. 15–20°), tiefer steiler (bis ca. 70°).
+- Kammern beginnen als runde Mulde an der **Außenseite** des Schachts und werden beim Vergrößern
+  **mehrlappig**; flacher Boden, Höhe bleibt gleich.
+- **Oben große Kammern dicht beieinander, nach unten kleiner und mit mehr Abstand.**
+- Kammern entstehen dort, wo Brut abgelegt wird (viele Ameisen an einer Stelle → runde Kammer).
+- Mehr Ameisen → mehr Verzweigung: erst baumartig, später ein Netz mit Schleifen.
+- Gänge halten Abstand zueinander (Nutzer-Wunsch: Gänge weiter auseinander).
+
 **fieldnotes** (zum Vergleich):
 1. Königin gräbt einen kurzen Schacht, unten sofort die Königskammer.
 2. Dann lange, **fast gerade waagrechte Gänge** links und rechts auf Höhe der Königskammer, dazu

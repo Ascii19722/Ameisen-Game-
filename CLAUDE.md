@@ -59,7 +59,8 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   world.js (Zickzack-Plan) muss dafür in Stufe 3 ersetzt werden.
 - Bauablauf wie ants.sim (Details: START.md, „Wie die Vorbilder ihre Gänge bauen“): langer Bogen →
   Haken + Königskammer → zweiter Bogen trifft den ersten (Schleife) → Seitenkammern nach außen →
-  Stamm mit Ästen nach unten.
+  Stamm mit Ästen nach unten. Gänge halten deutlich Abstand zueinander (Favorit: Bogen „Bild 6
+  weiterentwickelt“ Nr. 6). Kammern flach und mehrlappig, oben groß, unten kleiner (echte Nester).
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
 

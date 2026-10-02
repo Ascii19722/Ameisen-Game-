@@ -20,11 +20,11 @@ const PLAN = {
   wiggle: 0.22,      // zufälliges Wackeln der Grabrichtung
   down: 0.035,       // Neigung zur Wunschrichtung
   spread: 18,        // Abstand, den neue Gänge zu bekannten Gängen halten
-  chamberGap: 34,    // Mindestabstand zwischen Kammern
+  chamberGap: 40,    // Mindestabstand zwischen Kammern
   stub: 9,           // Länge des Stummels zu einer Seitenkammer
-  chamberSize: 2.3,  // Größe der Kammern (ca. 3,5 Ameisen breit)
+  room: [32, 16],       // jede Kammer gleich groß: Breite × Höhe in Pixeln (oval, liegend; Nutzerwunsch)
+  royalRoom: [46, 22],  // die Königskammer ist größer
   queenDepth: [105, 125],   // so tief gräbt die Königin ihren Schacht (Nutzerwunsch: etwa auf halber Höhe)
-  royalSize: 1.5,    // Königskammer ist so viel größer als andere Kammern
   royalMoves: 0,     // wie oft die Königin in eine tiefere Kammer umzieht (0 = nie, Nutzerwunsch)
 };
 
@@ -343,7 +343,7 @@ function removeTip(tip) {
 function endTip(tip, reached) {
   removeTip(tip);
   if (tip.through || tip.kind === 'exit') return;
-  const cx = tip.x + Math.cos(tip.dir) * 6, cy = tip.y + Math.sin(tip.dir) * 2;
+  const cx = tip.x + Math.cos(tip.dir) * (PLAN.room[0] / 2 - 3), cy = tip.y + Math.sin(tip.dir) * 3;
   // Seitengänge enden fast immer in einer Kammer (auch wenn ein Stein sie aufhält, sofern sie lang genug sind)
   const side = tip.kind === 'branch' && (reached || tip.len > 25) && Math.random() < 0.6;   // nicht jeder Gang braucht eine Kammer
   const wantRoom = tip.kind === 'queen' || tip.kind === 'stub' || side || (reached && Math.random() < 0.5);
@@ -361,8 +361,9 @@ function chamberSpace(cx, cy, ax, ay) {
   for (const c of world.chambers) if (Math.hypot((c.cx - cx) * 0.8, (c.cy - cy) * 1.3) < PLAN.chamberGap) return false;
   for (const t of world.tips) if (t.kind === 'room' && Math.hypot((t.cx - cx) * 0.8, (t.cy - cy) * 1.3) < PLAN.chamberGap) return false;
   let n = 0;
-  for (let y = Math.floor(cy - 9); y <= cy + 3; y++) {
-    for (let x = Math.floor(cx - 12); x <= cx + 12; x++) {
+  const [rw, rh] = PLAN.room;
+  for (let y = Math.floor(cy - rh); y <= cy + 3; y++) {
+    for (let x = Math.floor(cx - rw / 2); x <= cx + rw / 2; x++) {
       if (x < 2 || y < SURFACE_Y + 4 || x >= W - 2 || y >= H - 2) return false;
       // der eigene Zugangsgang (hinter dem Eingang der Kammer) zählt nicht
       const d = Math.hypot(x - ax, y - ay), behind = (x - ax) * (cx - ax) + (y - ay) * (cy - ay) < 0;
@@ -370,19 +371,29 @@ function chamberSpace(cx, cy, ax, ay) {
       if (knownTunnel(x, y)) n++;
     }
   }
-  return n < 6;
+  return n < 10;
+}
+
+// Grab-Bewegungen für eine Kammer: liegendes Oval mit fester Größe, Boden leicht abgeflacht,
+// Rand durch zufällige kleine Abweichungen unregelmäßig (gegraben hat Macken).
+function roomBlobs(cx, floor, royal) {
+  const [w, h] = royal ? PLAN.royalRoom : PLAN.room;
+  const a = w / 2 - 2, b = h / 2 - 2, my = floor - h / 2 + 2;   // Mitte etwas tiefer → Boden wird vom floor abgeschnitten
+  const blobs = [];
+  for (let gy = -b; gy <= b + 0.01; gy += 2.2) {
+    for (let gx = -a; gx <= a + 0.01; gx += 2.2) {
+      if ((gx / a) ** 2 + (gy / b) ** 2 > 1.05) continue;
+      blobs.push([cx + gx + rand(-0.6, 0.6), my + gy + rand(-0.6, 0.6), rand(1.9, 2.6)]);
+    }
+  }
+  return blobs;
 }
 
 // Eine Kammer entsteht aus vielen kleinen Grab-Bewegungen; der Boden wird flachgetreten
 // Die Grab-Bewegungen starten am Gang (ex, ey) und arbeiten sich von dort in die Kammer hinein.
 function startRoom(cx, cy, royal, ex, ey) {
-  const f = royal ? PLAN.royalSize : 1;   // die Königskammer ist größer
-  const k = PLAN.chamberSize * f, rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + 1);
-  const blobs = [];
-  for (let n = 0; n < Math.round(34 * f * f); n++) {
-    const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
-    blobs.push([cx + Math.cos(a) * d * rx * 0.75, floor - ry + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k)]);
-  }
+  const floor = Math.round(cy + 1);
+  const blobs = roomBlobs(cx, floor, royal);
   blobs.sort((a, b) => Math.hypot(a[0] - ex, a[1] - ey) - Math.hypot(b[0] - ex, b[1] - ey));
   const tip = newTip(cx, cy, 0, blobs.length, 'room');
   Object.assign(tip, { cx, cy, floor, blobs, royal });

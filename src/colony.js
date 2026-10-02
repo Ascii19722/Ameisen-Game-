@@ -160,7 +160,8 @@ function addPrey() {
 // Stellen am Kammerboden (Luft mit festem Boden darunter)
 function floorSpots(room) {
   const out = [];
-  for (let x = Math.round(room.cx - 14); x <= room.cx + 14; x++) {
+  const half = (room.royal ? PLAN.royalRoom : PLAN.room)[0] / 2;
+  for (let x = Math.round(room.cx - half); x <= room.cx + half; x++) {
     if (x < 1 || x >= W - 1) continue;
     for (let y = room.floor; y >= room.floor - 3; y--) {
       if (world.cells[idx(x, y)] === AIR && solidAt(x, y + 1)) { out.push([x, y]); break; }

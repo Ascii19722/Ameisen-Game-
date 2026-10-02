@@ -32,7 +32,6 @@
       <option value="waste">Abfall</option>
       <option value="reserve">leer / Reserve</option>
     </select>
-    <span>Größe</span><input id="kgroesse" type="range" min="0.6" max="2.2" step="0.1" value="1" title="Größe der nächsten Kammer">
     <button data-tool="fuellen" title="Taste 3">▒ Zuschütten</button>
     <button data-tool="huegel" title="Taste 4">▲ Sandhügel</button>
     <span>Pinsel</span><input id="pinsel" type="range" min="1" max="5" step="0.5" value="2.2">
@@ -138,12 +137,9 @@
 
   // Kammer wie im Spiel: viele kleine, unregelmäßige Grab-Bewegungen, flacher Boden
   function kammer(cx, cy, role) {
-    const f = +document.getElementById('kgroesse').value * (role === 'queen' ? PLAN.royalSize : 1);
-    const k = PLAN.chamberSize * f, rx = 4.6 * k, ry = 3.3 * k, floor = Math.round(cy + ry * 0.45);
-    for (let n = 0; n < Math.round(40 * f * f); n++) {
-      const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
-      dig(cx + Math.cos(a) * d * rx * 0.75, floor - ry * 0.9 + Math.sin(a) * d * ry * 0.8, (1.3 + Math.random() * 1.1) * Math.sqrt(k), floor);
-    }
+    // gleiche Form und Größe wie im Spiel (Königskammer größer)
+    const royal = role === 'queen', h = (royal ? PLAN.royalRoom : PLAN.room)[1], floor = Math.round(cy + h / 2 - 1);
+    for (const b of roomBlobs(cx, floor, royal)) dig(b[0], b[1], b[2], floor);
     if (role === 'queen') for (let i = marks.length - 1; i >= 0; i--) if (marks[i].role === 'queen') marks.splice(i, 1);   // nur eine Königin
     marks.push({ x: cx, y: floor, role });
   }

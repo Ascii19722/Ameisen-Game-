@@ -149,6 +149,8 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   wächst mit dem Graben (ca. 1/8 des Aushubs). Steinplatten an den Schichtgrenzen mit wenigen Lücken (Ameisen
   tasten sich entlang). Zeitraffer-Schieber bis 100×. Ameisen laufen bis 2 Pixel von der Wand entfernt (nicht nur an
   der Wand), damit sie Nischen nicht umrunden müssen.
+- KAMMERN (Nutzerwunsch, Vorbild-Bild): alle GLEICH GROSS, liegendes Oval 32×16 Pixel (PLAN.room), Königskammer
+  46×22 (PLAN.royalRoom); Boden leicht abgeflacht, Rand leicht unregelmäßig. Form in roomBlobs() (world.js), auch im Editor.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

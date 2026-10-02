@@ -115,6 +115,7 @@ function tipFront(tip) {
 
 function decide(a) {
   a.tip = null;
+  a.escortOf = null;
   if (a.job) { dropLoad(a); endJob(a); }
   if (a.caste === 'queen') { queenDecide(a); return; }
   if (a.caste === 'soldier') { soldierDecide(a); return; }
@@ -157,6 +158,15 @@ function queenDecide(a) {
   const r = world.royal;
   if (r) {
     if (!inRoyal(a)) {
+      // Umzug in eine neue Königskammer: erst warten, bis die Begleiterinnen da sind
+      if (colony.moveQueen) {
+        const esc = ants.filter(b => b.escortOf === a);
+        if (esc.length < 4) recruitEscorts(a, 4 - esc.length);
+        const ready = esc.filter(b => b.state === 'escort').length;
+        a.waitEscort = (a.waitEscort || 0) + 1;
+        if (ready < 3 && a.waitEscort < 15) { a.state = 'rest'; a.timer = 2; return; }
+        a.waitEscort = 0;
+      }
       // möglichst nah an die Kammermitte, aber jede Stelle in der Kammer ist recht
       const goal = bfs(idx(a.x, a.y), i => {
         const x = i % W, y = (i / W) | 0;
@@ -165,6 +175,11 @@ function queenDecide(a) {
       if (setPath(a, goal)) { a.state = 'toRoyal'; a.lost = false; return; }
       a.lost = isUnderground(a.x, a.y);   // kein Weg hinein: dann eben hier im Nest bleiben
     } else {
+      // Angekommen: Begleiterinnen gehen wieder an die Arbeit
+      if (colony.moveQueen) {
+        colony.moveQueen = false;
+        for (const b of ants) if (b.escortOf === a) { b.escortOf = null; b.state = 'rest'; b.timer = 0.5; }
+      }
       // Die Königin liegt still in ihrer Kammer, wird gefüttert und legt Eier
       a.state = 'rest';
       a.timer = rand(8, 15);
@@ -173,6 +188,37 @@ function queenDecide(a) {
   }
   a.state = 'rest';
   a.timer = rand(1, 3);
+}
+
+// Begleiterinnen für den Umzug der Königin: die nächsten freien Arbeiterinnen kommen zu ihr
+function recruitEscorts(q, n) {
+  const free = ants.filter(b => (b.caste === 'worker' || b.caste === 'nurse') && !b.job && !b.load && !b.carry &&
+    !b.escortOf && !b.foe && b.state !== 'digging' && b.state !== 'haul');
+  free.sort((p, r) => Math.hypot(p.x - q.x, p.y - q.y) - Math.hypot(r.x - q.x, r.y - q.y));
+  let k = ants.filter(b => b.escortOf === q).length;
+  for (const b of free.slice(0, n)) {
+    const goal = bfs(idx(b.x, b.y), i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - q.x) <= 2 && Math.abs(y - q.y) <= 2; }, N);
+    if (!setPath(b, goal)) continue;
+    b.tip = null;
+    b.state = 'toEscort';
+    b.escortOf = q;
+    b.escortIdx = k++;
+  }
+}
+
+// Begleiterin: läuft vor und hinter der Königin her
+function escortStep(a, dt) {
+  const q = a.escortOf;
+  if (!q || q.dead || !colony.moveQueen) { a.escortOf = null; a.state = 'rest'; a.timer = 0.5; return; }
+  if (q.path && q.state === 'toRoyal') {
+    const j = q.pi + [3, -3, 6, -6][a.escortIdx % 4];
+    if (j >= 0) {
+      const c = q.path[Math.min(j, q.path.length - 1)], cx = c % W, cy = (c / W) | 0;
+      a.mx = cx - a.x; a.my = cy - a.y;
+      if (a.mx || a.my) a.walk += dt * q.speed * 1.6;
+      a.x = cx; a.y = cy;
+    }
+  } else { a.mx = q.x - a.x; a.my = q.y - a.y; }   // wartet bei der Königin
 }
 
 // Soldatin: bewacht den Eingang, läuft oben und im oberen Gang Streife
@@ -238,6 +284,7 @@ function startCarry(a) {
 
 function arrive(a) {
   a.path = null;
+  if (a.state === 'toEscort') { a.state = 'escort'; return; }
   if (a.job) { jobArrive(a); return; }
   switch (a.state) {
     case 'toDig': {
@@ -329,6 +376,7 @@ function updateAnt(a, dt) {
   }
   orient(a, dt);
   if (antCombat(a, dt)) return;
+  if (a.state === 'escort') { escortStep(a, dt); return; }
   if (a.state === 'haul') return;   // trägt mit anderen eine Beute (Bewegung in colony.js)
 
   if (a.timer > 0) {

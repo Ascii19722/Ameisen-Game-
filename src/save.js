@@ -42,7 +42,7 @@ function saveGame() {
         surface: Array.from(world.surface), layers: world.layers.map(l => Array.from(l)),
         tips: world.tips, pts: world.pts, branchStarts: world.branchStarts,
         chambers: world.chambers.map(c => ({ cx: c.cx, cy: c.cy, floor: c.floor, royal: c.royal, role: c.role })),
-        entranceX: world.entranceX, dug: world.dug,
+        entranceX: world.entranceX, dug: world.dug, moves: world.moves || 0, time: world.time || 0,
       },
       ants: ants.map(a => ({ x: a.x, y: a.y, caste: a.caste, speed: a.speed })),
       colony: {
@@ -77,6 +77,8 @@ function loadGame() {
   world.royal = world.chambers.find(c => c.royal) || null;
   world.entranceX = w.entranceX;
   world.dug = w.dug;
+  world.moves = w.moves || 0;
+  world.time = w.time || 0;
   world.dirty = true;
   world.dirtyRect = { x0: 0, y0: 0, x1: W - 1, y1: H - 1 };
 

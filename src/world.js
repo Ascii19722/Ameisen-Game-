@@ -298,6 +298,7 @@ function digStep(tip, ax, ay, budget) {
     if (tip.len % 3 === 0 && tip.kind !== 'stub') world.pts.push([tip.x, tip.y, tip.dir]);
     if (tip.len >= tip.max) endTip(tip, !tip.through);
   }
+  if (n) tip.touched = world.time || 0;
   return n;
 }
 
@@ -314,6 +315,11 @@ function endTip(tip, reached) {
   // Seitengänge enden fast immer in einer Kammer (auch wenn ein Stein sie aufhält, sofern sie lang genug sind)
   const side = tip.kind === 'branch' && (reached || tip.len > 25) && Math.random() < 0.6;   // nicht jeder Gang braucht eine Kammer
   const wantRoom = tip.kind === 'queen' || tip.kind === 'stub' || side || (reached && Math.random() < 0.5);
+  if (tip.forQueen) {   // Gang für die neue Königskammer: am Ende kommt immer eine Kammer
+    startRoom(cx, cy, false, tip.x, tip.y);
+    world.tips[world.tips.length - 1].forQueen = true;
+    return;
+  }
   if (wantRoom && (tip.kind === 'queen' || chamberSpace(cx, cy, tip.x, tip.y))) {
     startRoom(cx, cy, tip.kind === 'queen', tip.x, tip.y);
   }
@@ -361,14 +367,34 @@ function digRoomStep(tip, ax, ay, budget) {
     }
     tip.blobs.shift();
   }
-  if (!tip.blobs.length) {
+  if (n) tip.touched = world.time || 0;
+  if (!tip.blobs.length) finishRoom(tip);
+  return n;
+}
+
+function finishRoom(tip) {
+  {
     removeTip(tip);
     const ch = { cx: tip.cx, cy: tip.cy, floor: tip.floor, id: world.chambers.length, royal: tip.royal };
     world.chambers.push(ch);
     if (tip.royal) world.royal = ch;
-    assignRole(ch);
+    if (tip.forQueen && world.royal && ch.cy > world.royal.cy + 15) moveRoyal(ch);
+    else assignRole(ch);
   }
-  return n;
+}
+
+// Neue, tiefere (sicherere) Königskammer: die alte bekommt eine andere Aufgabe,
+// die Königin wird von Arbeiterinnen hinunter begleitet (siehe queenDecide in ants.js)
+function moveRoyal(ch) {
+  const old = world.royal;
+  old.royal = false;
+  old.role = null;
+  assignRole(old);
+  ch.royal = true;
+  ch.role = 'queen';
+  world.royal = ch;
+  world.moves = (world.moves || 0) + 1;
+  colony.moveQueen = true;
 }
 
 // Die Königskammer bleibt ein eigener, ruhiger Raum: dort beginnen keine neuen Gänge
@@ -376,6 +402,15 @@ const nearRoyal = p => world.royal && Math.hypot(p[0] - world.royal.cx, (p[1] - 
 
 // Neue Grabstellen nach dem Bauplan: erst tief, dann (mit größerem Nest) in die Breite
 function updatePlan(dt) {
+  world.time = (world.time || 0) + dt;
+  // Baustellen, an denen lange nichts mehr weitergeht (Stein, Weltrand, unerreichbar), werden aufgegeben
+  for (const t of world.tips.slice()) {
+    if (t.touched === undefined) t.touched = world.time;
+    if (world.time - t.touched < 150) continue;
+    if (t.kind === 'queen') endTip(t, true);
+    else if (t.kind === 'room' && t.blobs.length < t.max - 8) finishRoom(t);   // halb fertige Kammer zählt
+    else removeTip(t);
+  }
   if (world.dug >= MAX_DUG) return;
   const nest = 1 + world.dug / 500;
   const busy = world.tips.filter(t => t.kind !== 'room').length;
@@ -403,6 +438,18 @@ function updatePlan(dt) {
     }
   }
   if (!world.royal) return;
+  // Wächst die Kolonie, graben sie weiter unten eine neue, sicherere Königskammer
+  if (ants.length >= 60 * ((world.moves || 0) + 1) && world.royal.cy < H - 60 && !colony.moveQueen &&
+      !world.tips.some(t => t.forQueen) && Math.random() < dt * 0.05) {
+    // eine der tiefsten Stellen (zufällig, damit ein Fehlversuch nicht immer wieder gleich endet)
+    const deepest = world.pts.filter(p => !nearRoyal(p) && p[1] < H - 15).sort((p, q) => q[1] - p[1]).slice(0, 8);
+    const d = deepest.length ? deepest[randInt(0, deepest.length - 1)] : null;
+    if (d) {
+      const t = newTip(d[0], d[1], Math.PI / 2 + rand(-0.3, 0.3), Math.max(25, (world.royal.cy + 45 - d[1]) / 0.8), 'deep');
+      t.forQueen = true;
+      world.tips.push(t);
+    }
+  }
   // Seitenkammer über einen kurzen Stummel – nur draußen an Seitengängen, nicht am Hauptschacht
   if (world.tips.length < 2 + nest / 4 && world.pts.length > 30 && Math.random() < dt * 0.12 * Math.min(1, nest / 4)) {
     const p = world.pts[randInt(0, world.pts.length - 1)];

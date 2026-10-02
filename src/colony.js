@@ -53,6 +53,7 @@ const colony = {
   prey: [],      // tote Insekten {x, y, kind, need, portions, carriers, moving, wait}
   preyTimer: 60,
   dumpX: 0,      // Abfallhaufen draußen
+  moveQueen: false,   // die Königin zieht gerade in eine neue Königskammer um
 };
 
 function resetColony() {
@@ -64,6 +65,7 @@ function resetColony() {
   colony.layTimer = 15;
   colony.sourceTimer = 0;
   colony.waste = [];
+  colony.moveQueen = false;
   colony.prey = [];
   colony.preyTimer = 60;
   colony.dumpX = Math.round(world.entranceX + (Math.random() < 0.5 ? -1 : 1) * rand(60, 90));

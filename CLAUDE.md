@@ -134,6 +134,9 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   Königin liegt still in ihrer eigenen Kammer (dort beginnen keine neuen Gänge), wird gefüttert, legt laufend
   Eier. Futterkammer gut sichtbar (größere Futterstücke) und etwa halb voll; ist der Vorrat unter 40 %,
   legt die Königin keine Eier (Kolonie regelt sich selbst).
+- Umzug der Königin: ab 60/120/… Ameisen graben sie tiefer unten eine neue Königskammer; ist sie fertig,
+  holen 4 Arbeiterinnen die Königin ab und begleiten sie hinunter (vorne/hinten). Alte Kammer bekommt neue Aufgabe.
+  Baustellen ohne Fortschritt (150 s) werden aufgegeben.
 - Gänge etwas breiter (Radius ca. 2,2 statt 1,6). Eier liegen einzeln mit Abstand am Kammerboden.
 - Larven bewegen sich: echte Larven können nicht laufen, sie winden/krümmen sich, heben den Kopf
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.

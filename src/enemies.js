@@ -38,7 +38,7 @@ function spawnEnemies() {
     const n = Math.min(6, 2 + Math.floor(ants.length / 40));
     for (let k = 0; k < n; k++) {
       const rx = fromLeft ? 3 + k * 3 : W - 4 - k * 3;
-      const e = createAnt(rx, columnTop(rx) - 1, 'raider');
+      const e = createAnt(rx, columnTop(rx) - 1, 'raider', null);
       Object.assign(e, { type: 'raider', state: 'come', speed: rand(7, 9) });
       enemies.push(e);
     }
@@ -53,7 +53,7 @@ function killAnt(a) {
   dropLoad(a);
   endJob(a);
   // Tote Ameise bleibt liegen und wird später weggeräumt
-  const c = { kind: 'corpse', caste: a.caste, room: null, lvl: 0, by: null, claim: null, dumped: false, age: 0 };
+  const c = { kind: 'corpse', caste: a.caste, art: a.art, room: null, lvl: 0, by: null, claim: null, dumped: false, age: 0 };
   colony.waste.push(c);
   dropLoose(c, a.x, a.y);
 }

@@ -1,0 +1,40 @@
+EIGENE BILDER FÜR DIE AMEISEN-SIM
+=================================
+
+Eigene PNG-Bilder (z. B. aus Claude Design) kommen
+  • für das Programm (.exe):  in den Windows-Ordner  Bilder\Ameisen-Game
+    (dort bleiben sie auch bei „Ameisen-Sim aktualisieren“ erhalten)
+  • für das Spiel im Browser: in diesen Ordner hier („bilder“).
+Unterordner sind erlaubt.
+
+  • Das Programm (.exe) findet die Bilder beim Start von selbst.
+  • Im Browser (index.html) vorher einmal „Bilderliste erstellen.bat“ doppelklicken.
+  • Im Spiel zeigt der Knopf „BILDER“ (Bilder-Prüfer), was gefunden und wie es verstanden wurde.
+
+WAS AUF EINEM BILD IST, STEHT IM NAMEN (Datei- oder Ordnername)
+--------------------------------------------------------------
+Groß-/Kleinschreibung, Umlaute, Leerzeichen, _ und - sind egal. Englisch geht auch.
+
+  Art        feuerameise, honigameise, bullet, waldameise   (Liste: src/arten.js)
+  Sorte      arbeiterin, soldatin, koenigin, pflegerin, maennchen, jungkoenigin
+             (fehlt sie: Arbeiterin)
+  Ansicht    seite  oder  oben                               (fehlt sie: Seite)
+  Animation  laufen, stehen, graben, tragen, kaempfen, fressen, tot   (fehlt sie: Laufen)
+  Nummer     die letzte Zahl im Dateinamen = Bild Nr. in der Animation
+
+  Beispiele:
+    Feuerameise/Arbeiterin_Seite_Laufen_1.png
+    Feuerameise/Arbeiterin_Seite_Laufen_2.png
+    Honigameise Koenigin oben stehen 01.png
+    bullet_soldier_side_walk_3.png
+
+  Pflanzen:  Pflanzenname + Zustand (voll / halb / leer) + Nummer
+    Blume_voll_1.png, Blume_voll_2.png, Blume_leer_1.png
+    (Liste der Pflanzen: src/pflanzen.js – neue Pflanzen dort eintragen)
+
+SO SOLLEN DIE BILDER AUSSEHEN
+-----------------------------
+  • PNG mit durchsichtigem Hintergrund, jedes Bild einer Animation gleich groß.
+  • Seitenansicht: Ameise läuft nach RECHTS, Füße unten im Bild.
+  • Pflanzen: Wurzel/Boden am unteren Bildrand.
+  • Größe und Bodenlinie lassen sich im Bilder-Prüfer mit Reglern einstellen.

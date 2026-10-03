@@ -68,9 +68,12 @@ $quelle = (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName
 $app = Join-Path $ziel 'resources\app'
 if (Test-Path $app) { Remove-Item $app -Recurse -Force }
 New-Item -ItemType Directory -Path $app | Out-Null
-foreach ($teil in 'index.html', 'src', 'tools', 'electron', 'package.json') {
-  Copy-Item (Join-Path $quelle $teil) $app -Recurse -Force
+foreach ($teil in 'index.html', 'src', 'tools', 'electron', 'bilder', 'package.json') {
+  if (Test-Path (Join-Path $quelle $teil)) { Copy-Item (Join-Path $quelle $teil) $app -Recurse -Force }
 }
+# Diese Datei selbst auf den neuesten Stand bringen (der Kopf bis ::SKRIPT:: bleibt immer gleich)
+$neueBat = Join-Path $quelle 'Ameisen-Sim aktualisieren.bat'
+if (Test-Path $neueBat) { Copy-Item $neueBat $env:AMEISEN_BAT -Force }
 Remove-Item $tmp -Recurse -Force
 Remove-Item $neu -Force
 

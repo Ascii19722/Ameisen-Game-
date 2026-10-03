@@ -25,6 +25,7 @@ function itemData(it) {
   const d = { kind: it.kind, x: carrier ? carrier.x : it.x, y: carrier ? carrier.y : it.y, lvl: carrier ? 0 : it.lvl,
     room: carrier || !it.room ? -1 : world.chambers.indexOf(it.room) };
   if (it.caste) d.caste = it.caste;
+  if (it.art) d.art = it.art;
   if (it.dumped) d.dumped = true;
   if (it.age !== undefined) { d.age = it.age; d.fed = it.fed; d.lastFed = it.lastFed; d.ph = it.ph; }
   return d;
@@ -44,12 +45,12 @@ function saveGame() {
         chambers: world.chambers.map(c => ({ cx: c.cx, cy: c.cy, floor: c.floor, royal: c.royal, role: c.role })),
         entranceX: world.entranceX, dug: world.dug, moves: world.moves, time: world.time, entrances: world.entrances,
       },
-      ants: ants.map(a => ({ x: a.x, y: a.y, caste: a.caste, speed: a.speed })),
+      ants: ants.map(a => ({ x: a.x, y: a.y, caste: a.caste, art: a.art, speed: a.speed })),
       colony: {
         food: food.map(itemData), brood: colony.brood.map(itemData), sources: colony.sources,
         waste: colony.waste.map(itemData), dumpX: colony.dumpX, preyTimer: colony.preyTimer,
         prey: colony.prey.map(p => ({ x: p.x, y: p.y, kind: p.kind, need: p.need, portions: p.portions })),
-        queenFood: colony.queenFood, eatTimer: colony.eatTimer, layTimer: colony.layTimer,
+        art: colony.art, queenFood: colony.queenFood, eatTimer: colony.eatTimer, layTimer: colony.layTimer,
       },
       sky: { time: sky.time, day: sky.day },
     };
@@ -84,7 +85,7 @@ function loadGame() {
 
   ants.length = 0;
   for (const d of data.ants) {
-    const a = createAnt(d.x, d.y, d.caste);
+    const a = createAnt(d.x, d.y, d.caste, d.art || 'waldameise');
     a.speed = d.speed;
     ants.push(a);
   }
@@ -95,6 +96,7 @@ function loadGame() {
   colony.waste = (c.waste || []).map(item);
   colony.prey = (c.prey || []).map(p => ({ ...p, carriers: [], moving: false, wait: 0 }));
   colony.jobs = {};
+  colony.art = c.art || 'waldameise';
   colony.dumpX = c.dumpX || world.entranceX + 70;
   colony.preyTimer = c.preyTimer || 60;
   // Lose Dinge fallen auf den Boden

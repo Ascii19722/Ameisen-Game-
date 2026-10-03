@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ameisen-Sim – Bilder-Prüfer</title>
+  <style>
+    html, body { margin: 0; background: #140d08; color: #f0e9dc; font: 14px system-ui, sans-serif; }
+    #leiste { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      padding: 10px 14px; background: rgba(240, 233, 220, 0.97); color: #3e3128; border-bottom: 2px solid rgba(120, 100, 80, 0.35); }
+    #leiste button { padding: 6px 12px; border-radius: 8px; border: 2px solid rgba(120, 100, 80, 0.35);
+      background: #fbf6ec; color: #3e3128; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+    main { padding: 14px 18px 60px; max-width: 1400px; }
+    h2 { margin: 26px 0 8px; font-size: 18px; color: #f4c890; }
+    h3 { margin: 16px 0 6px; font-size: 15px; }
+    .karte { background: #241811; border: 1px solid #4a3527; border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+    .reihe { display: flex; flex-wrap: wrap; gap: 10px; }
+    .vorschau { background: #2e2017; border-radius: 8px; padding: 6px; }
+    .vorschau canvas { display: block; border-radius: 6px; }
+    .vorschau small { display: block; color: #c8b8a4; margin-top: 4px; }
+    .regler { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 6px 0; color: #e0d4c2; }
+    .regler input[type=range] { width: 160px; accent-color: #b5704a; vertical-align: middle; }
+    code, pre { background: #120c08; color: #f4e2c4; border-radius: 6px; padding: 2px 6px; }
+    pre { padding: 8px 10px; white-space: pre-wrap; margin: 6px 0; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    td, th { text-align: left; padding: 4px 8px; border-bottom: 1px solid #3a2a1f; vertical-align: top; }
+    th { color: #f4c890; }
+    .gut { color: #9fd68a; } .schlecht { color: #f39a7a; } .grau { color: #a8988a; }
+  </style>
+</head>
+<body>
+  <div id="leiste">
+    <b>BILDER-PRÜFER</b>
+    <span>Zoom</span><input id="zoom" type="range" min="2" max="16" step="1" value="8">
+    <button id="neu">↻ Neu einlesen</button>
+    <button id="spiel">✕ Zurück zum Spiel</button>
+  </div>
+  <main id="inhalt"></main>
+
+  <script src="../src/world.js"></script>
+  <script src="../src/arten.js"></script>
+  <script src="../src/pflanzen.js"></script>
+  <script src="../bilder/liste.js"></script>
+  <script src="../src/sprites.js"></script>
+  <script src="../src/bilder.js"></script>
+  <script>
+  'use strict';
+  // Zeigt, welche eigenen Bilder gefunden wurden, wie ihre Namen verstanden wurden, und spielt die
+  // Animationen ab – neben der eingebauten Ameise, damit man die Größe vergleichen kann.
+  const inhalt = document.getElementById('inhalt');
+  const vorschauen = [];   // {canvas, zeichnen(g, w, h, now)}
+  let zoom = 8;            // Bildschirm-Pixel pro Welt-Pixel
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const el = (tag, html, cls) => { const e = document.createElement(tag); if (html !== undefined) e.innerHTML = html; if (cls) e.className = cls; return e; };
+
+  function vorschau(eltern, breite, hoehe, text, zeichnen) {
+    const box = el('div', undefined, 'vorschau');
+    const c = el('canvas');
+    c.width = breite; c.height = hoehe;
+    box.appendChild(c);
+    if (text) box.appendChild(el('small', text));
+    eltern.appendChild(box);
+    vorschauen.push({ canvas: c, zeichnen });
+  }
+
+  // Boden und eingebaute Ameise zum Vergleich
+  function boden(g, w, h) {
+    g.fillStyle = '#5a4030'; g.fillRect(0, h - 24, w, 24);
+    g.fillStyle = '#7a5a42'; g.fillRect(0, h - 24, w, 2);
+  }
+  function eingebaut(g, art, kaste, x, y, now, carry = false) {
+    const img = spritesFor(art, kaste)[carry ? 1 : 0][Math.floor(now / 90) % WALK_FRAMES], k = zoom / SPRITE_RES, s = img.width * k;
+    g.imageSmoothingEnabled = false;
+    g.drawImage(img, x - s / 2, y - Math.round(img.width * 0.62) * k, s, s);
+  }
+  function eigenes(g, img, m, x, y) {
+    const w = m.breite * zoom, h = w * img.naturalHeight / img.naturalWidth;
+    g.save(); g.translate(x, y);
+    if (m.schaut === 'links') g.scale(-1, 1);
+    g.imageSmoothingEnabled = w < img.naturalWidth;
+    g.drawImage(img, -w / 2, -h * m.boden, w, h);
+    g.restore();
+  }
+
+  function code(art) {
+    const b = ARTEN[art].bild || {};
+    return `bild: { breite: ${b.breite ?? 7}, boden: ${b.boden ?? 0.85}, schaut: '${b.schaut || 'rechts'}' },`;
+  }
+
+  function aufbauen() {
+    inhalt.innerHTML = '';
+    vorschauen.length = 0;
+
+    // ---- Ordner ----
+    inhalt.appendChild(el('h2', 'Wo gesucht wurde'));
+    const q = el('div', undefined, 'karte');
+    if (!BILDER.quellen.length) {
+      q.innerHTML = '<span class="schlecht">Keine Bilder-Liste gefunden.</span> Im Browser: einmal <code>Bilderliste erstellen.bat</code> ' +
+        'doppelklicken (liest den Ordner <code>bilder</code> im Spiel). Im Programm (.exe) passiert das von selbst.';
+    } else {
+      q.innerHTML = BILDER.quellen.map(o => `<div><b>${esc(o.name)}</b> <span class="grau">${esc(o.pfad)}</span> – ` +
+        `<span class="${o.anzahl ? 'gut' : 'grau'}">${o.anzahl} PNG</span></div>`).join('');
+    }
+    inhalt.appendChild(q);
+
+    // ---- Ameisen ----
+    inhalt.appendChild(el('h2', 'Ameisen'));
+    for (const [art, A] of Object.entries(ARTEN)) {
+      const karte = el('div', undefined, 'karte');
+      const eigen = BILDER.ameisen[art];
+      karte.appendChild(el('h3', `${esc(A.name)} <span class="grau">(${art}) – ${eigen ? '<span class="gut">eigene Bilder</span>' : 'noch keine eigenen Bilder: eingebaute Ameise in Ersatzfarben'}</span>`));
+      if (eigen) {
+        // Regler: Größe, Bodenlinie, Blickrichtung → Zeile für arten.js
+        A.bild = Object.assign({ breite: 7, boden: 0.85, schaut: 'rechts' }, A.bild || {});
+        const r = el('div', undefined, 'regler');
+        r.innerHTML = `<label>Breite <input type="range" min="2" max="40" step="0.5" value="${A.bild.breite}" data-f="breite"> <b></b> Welt-Pixel</label>
+          <label>Füße bei <input type="range" min="0.4" max="1" step="0.01" value="${A.bild.boden}" data-f="boden"> <b></b></label>
+          <label><input type="checkbox" ${A.bild.schaut === 'links' ? 'checked' : ''} data-f="schaut"> Bild schaut nach links</label>`;
+        const pre = el('pre', esc(code(art)));
+        const zeigen = () => {
+          r.querySelectorAll('input[type=range]').forEach(i => { i.nextElementSibling.textContent = i.value; });
+          pre.textContent = 'In src/arten.js bei ' + art + ' eintragen:\n' + code(art);
+        };
+        r.addEventListener('input', e => {
+          const f = e.target.dataset.f;
+          if (f === 'schaut') A.bild.schaut = e.target.checked ? 'links' : 'rechts';
+          else A.bild[f] = +e.target.value;
+          zeigen();
+        });
+        karte.appendChild(r);
+        karte.appendChild(pre);
+        zeigen();
+        for (const [kaste, ansichten] of Object.entries(eigen)) {
+          for (const [ansicht, anims] of Object.entries(ansichten)) {
+            karte.appendChild(el('div', `<b>${esc(KASTEN[kaste].name)}</b> · ${esc(ANSICHTEN[ansicht].name)}`));
+            const reihe = el('div', undefined, 'reihe');
+            for (const [anim, liste] of Object.entries(anims)) {
+              const text = `${esc(ANIMATIONEN[anim].name)}: ${liste.length} Bild${liste.length > 1 ? 'er' : ''} (Nr. ${liste.map(e => e.nr).join(', ')})`;
+              vorschau(reihe, 300, 150, text, (g, w, h, now) => {
+                boden(g, w, h);
+                const fertig = liste.filter(bildBereit);
+                if (ansicht === 'seite' && CASTES[kaste]) eingebaut(g, art, kaste, 50, h - 24, now);
+                if (!fertig.length) { g.fillStyle = '#f39a7a'; g.fillText('lädt nicht', w / 2, 20); return; }
+                const e = fertig[Math.floor(now / 1000 * 8) % fertig.length];
+                if (ansicht === 'seite') eigenes(g, e.img, bildMasse(art, kaste), w * 0.62, h - 24);
+                else {   // von oben: mittig zeigen
+                  const s = bildMasse(art, kaste).breite * zoom, hh = s * e.img.naturalHeight / e.img.naturalWidth;
+                  g.imageSmoothingEnabled = s < e.img.naturalWidth;
+                  g.drawImage(e.img, w / 2 - s / 2, (h - 24) / 2 - hh / 2, s, hh);
+                }
+              });
+            }
+            karte.appendChild(reihe);
+          }
+        }
+        karte.appendChild(el('div', '<span class="grau">Links klein: die eingebaute Ameise zum Größenvergleich.</span>'));
+      } else {
+        const reihe = el('div', undefined, 'reihe');
+        for (const kaste of ['worker', 'nurse', 'soldier', 'queen']) {
+          vorschau(reihe, 150, 110, esc(KASTEN[kaste].name), (g, w, h, now) => { boden(g, w, h); eingebaut(g, art, kaste, w / 2, h - 24, now); });
+        }
+        karte.appendChild(reihe);
+      }
+      inhalt.appendChild(karte);
+    }
+
+    // ---- Pflanzen ----
+    inhalt.appendChild(el('h2', 'Pflanzen'));
+    for (const [art, P] of Object.entries(PFLANZEN)) {
+      const karte = el('div', undefined, 'karte');
+      const eigen = BILDER.pflanzen[art];
+      karte.appendChild(el('h3', `${esc(P.name)} <span class="grau">(${art}) – ${eigen ? '<span class="gut">eigene Bilder</span>' : P.eingebaut ? 'eingebaute Zeichnung' : '<span class="schlecht">keine Bilder – erscheint nicht im Spiel</span>'}</span>`));
+      if (eigen) {
+        const r = el('div', undefined, 'regler');
+        r.innerHTML = `<label>Höhe <input type="range" min="4" max="80" step="1" value="${P.hoehe || 20}"> <b>${P.hoehe || 20}</b> Welt-Pixel</label>`;
+        const pre = el('pre', `In src/pflanzen.js bei ${art} eintragen: hoehe: ${P.hoehe || 20}`);
+        r.addEventListener('input', e => { P.hoehe = +e.target.value; e.target.nextElementSibling.textContent = P.hoehe; pre.textContent = `In src/pflanzen.js bei ${art} eintragen: hoehe: ${P.hoehe}`; });
+        karte.appendChild(r);
+        karte.appendChild(pre);
+        const reihe = el('div', undefined, 'reihe');
+        for (const [zustand, liste] of Object.entries(eigen)) {
+          vorschau(reihe, 220, 220, `${esc(ZUSTAENDE[zustand].name)}: ${liste.length} Bild${liste.length > 1 ? 'er' : ''}`, (g, w, h, now) => {
+            boden(g, w, h);
+            eingebaut(g, 'waldameise', 'worker', 30, h - 24, now);
+            const fertig = liste.filter(bildBereit);
+            if (!fertig.length) return;
+            const img = fertig[Math.floor(now / 1000 * (P.tempo || 4)) % fertig.length].img;
+            const hh = (P.hoehe || 20) * zoom, ww = hh * img.naturalWidth / img.naturalHeight;
+            g.imageSmoothingEnabled = ww < img.naturalWidth;
+            g.drawImage(img, w / 2 - ww / 2, h - 24 - hh, ww, hh);
+          });
+        }
+        karte.appendChild(reihe);
+      }
+      inhalt.appendChild(karte);
+    }
+
+    // ---- Alle Dateien ----
+    inhalt.appendChild(el('h2', `Alle Dateien (${BILDER.dateien.length})`));
+    const t = el('table');
+    t.innerHTML = '<tr><th>Datei</th><th>Ordner</th><th>verstanden als</th></tr>' + BILDER.dateien.map(e => {
+      let als;
+      if (e.typ === 'ameise') als = `${ARTEN[e.art].name} · ${KASTEN[e.kaste].name} · ${ANSICHTEN[e.ansicht].name} · ${ANIMATIONEN[e.anim].name} · Bild ${e.nr}`;
+      else if (e.typ === 'pflanze') als = `Pflanze: ${PFLANZEN[e.art].name} · ${ZUSTAENDE[e.zustand].name} · Bild ${e.nr}`;
+      else als = `<span class="schlecht">${esc(e.fehler)}</span>`;
+      if (e.typ !== 'unbekannt' && e.fehler) als += ` <span class="schlecht">(${esc(e.fehler)})</span>`;
+      return `<tr><td>${esc(e.datei)}</td><td class="grau">${esc(e.quelle)}</td><td>${als}</td></tr>`;
+    }).join('');
+    inhalt.appendChild(t);
+    if (!BILDER.dateien.length) inhalt.appendChild(el('p', 'Noch keine Bilder. Wie sie heißen sollen, steht in <code>bilder/LIESMICH.txt</code>.', 'grau'));
+  }
+
+  function frame(now) {
+    for (const v of vorschauen) {
+      const g = v.canvas.getContext('2d');
+      g.clearRect(0, 0, v.canvas.width, v.canvas.height);
+      g.font = '12px system-ui'; g.textAlign = 'center';
+      v.zeichnen(g, v.canvas.width, v.canvas.height, now);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  document.getElementById('zoom').addEventListener('input', e => { zoom = +e.target.value; });
+  document.getElementById('neu').onclick = () => location.reload();
+  document.getElementById('spiel').onclick = () => { location.href = '../index.html'; };
+  aufbauen();
+  // Bilder laden nach und nach: wenn alle da sind, Fehler-Spalte auffrischen
+  Promise.all(BILDER.dateien.filter(e => e.img).map(e => new Promise(r => { e.img.addEventListener('load', r); e.img.addEventListener('error', r); if (e.img.complete) r(); })))
+    .then(() => { if (BILDER.dateien.some(e => e.fehler && e.typ !== 'unbekannt')) aufbauen(); });
+  requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

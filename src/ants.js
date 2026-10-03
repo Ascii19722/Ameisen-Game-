@@ -77,9 +77,9 @@ function buildPath(goal) {
 
 // ---------- Ameisen ----------
 
-function createAnt(x, y, caste) {
+function createAnt(x, y, caste, art = 'waldameise') {
   return {
-    caste, x, y,
+    caste, art, x, y,
     path: null, pi: 0, t: 0,
     mx: 1, my: 0,           // letzte Bewegungsrichtung
     rot: 0,                 // Drehung des Körpers (Füße zeigen zum Boden)
@@ -104,9 +104,9 @@ function spawnAnts() {
   const ex = world.entranceX;
   for (let k = 0; k < WORKER_COUNT; k++) {
     const x = ex + (Math.random() < 0.5 ? -1 : 1) * randInt(4, 26);
-    ants.push(createAnt(x, columnTop(x) - 1, 'worker'));
+    ants.push(createAnt(x, columnTop(x) - 1, 'worker', colony.art));
   }
-  ants.push(createAnt(ex + 2, SURFACE_Y - 1, 'queen'));
+  ants.push(createAnt(ex + 2, SURFACE_Y - 1, 'queen', colony.art));
 }
 
 function setPath(a, goal) {

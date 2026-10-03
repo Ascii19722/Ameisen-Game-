@@ -7,7 +7,6 @@
 
 const SPRITE_RES = 4;      // Sprite-Pixel pro Welt-Pixel
 const SPRITE_SIZE = 64;    // Kantenlänge eines Posen-Bildes
-const SPRITE_GROUND = Math.round(SPRITE_SIZE * 0.62);   // Bodenlinie im Bild
 const WALK_FRAMES = 8;
 
 const C = {
@@ -189,27 +188,46 @@ function pixelate(g, w, h, palette, unpremul = false) {
   g.putImageData(img, 0, 0);
 }
 
-const antSprites = {};   // antSprites[caste][carry ? 1 : 0][frame]
-function buildSideSprites() {
-  for (const [name, p] of Object.entries(CASTES)) {
-    const palette = [p.body, p.shine, p.leg, p.far, p.front, p.frontShine, C.plate, C.eye, C.ocelli, C.scar, C.grain, C.grainEdge].filter(Boolean);
-    antSprites[name] = [[], []];
-    for (let carry = 0; carry < 2; carry++) {
-      for (let f = 0; f < WALK_FRAMES; f++) {
-        const cv = document.createElement('canvas');
-        cv.width = SPRITE_SIZE;
-        cv.height = SPRITE_SIZE;
-        const g = cv.getContext('2d', { willReadFrequently: true });
-        g.translate(SPRITE_SIZE / 2, SPRITE_GROUND - 1.05 * SPRITE_RES * p.size);
-        g.scale(SPRITE_RES * p.size, SPRITE_RES * p.size);
-        drawSideAnt(g, f / WALK_FRAMES * Math.PI * 2, p, carry === 1);
-        pixelate(g, SPRITE_SIZE, SPRITE_SIZE, palette, true);
-        antSprites[name][carry][f] = cv;
-      }
+// Laufbilder einer Sorte vorzeichnen: [ohne Sand, mit Sand][Bild]. Große Ameisen (z. B. Bullet-Königin)
+// bekommen ein größeres Bild; die Bodenlinie liegt immer bei 62 % der Bildhöhe.
+function buildAntFrames(p) {
+  const size = SPRITE_SIZE * Math.max(1, Math.ceil(p.size / 2.4)), ground = Math.round(size * 0.62);
+  const palette = [p.body, p.shine, p.leg, p.far, p.front, p.frontShine, C.plate, C.eye, C.ocelli, C.scar, C.grain, C.grainEdge].filter(Boolean);
+  const out = [[], []];
+  for (let carry = 0; carry < 2; carry++) {
+    for (let f = 0; f < WALK_FRAMES; f++) {
+      const cv = document.createElement('canvas');
+      cv.width = size;
+      cv.height = size;
+      const g = cv.getContext('2d', { willReadFrequently: true });
+      g.translate(size / 2, ground - 1.05 * SPRITE_RES * p.size);
+      g.scale(SPRITE_RES * p.size, SPRITE_RES * p.size);
+      drawSideAnt(g, f / WALK_FRAMES * Math.PI * 2, p, carry === 1);
+      pixelate(g, size, size, palette, true);
+      out[carry][f] = cv;
     }
   }
+  return out;
 }
-buildSideSprites();
+const antSprites = {};   // antSprites[caste][carry ? 1 : 0][frame] – die Rote Waldameise
+for (const [name, p] of Object.entries(CASTES)) antSprites[name] = buildAntFrames(p);
+
+// Körperbau einer Sorte bei einer bestimmten Art: Ersatzfarben, Ersatzform und Größe aus arten.js
+function casteLook(art, caste) {
+  const A = art && art !== 'waldameise' ? ARTEN[art] : null;
+  const p = CASTES[caste];
+  if (!A) return p;
+  const look = Object.assign({}, p, A.farben || {}, A.form || {});
+  look.size = p.size * (A.groesse || 1);
+  return look;
+}
+// Eingebaute Laufbilder für eine Art (andere Arten als die Waldameise werden erst bei Bedarf gezeichnet)
+const artSprites = {};
+function spritesFor(art, caste) {
+  if (!art || art === 'waldameise' || !ARTEN[art]) return antSprites[caste];
+  const key = art + ':' + caste;
+  return artSprites[key] || (artSprites[key] = buildAntFrames(casteLook(art, caste)));
+}
 
 // ---------- Brut und Futter ----------
 // Kleine Bilder, Mitte bei (ITEM_SPR/2, ITEM_SPR/2), gleicher Maßstab wie eine Arbeiterin.

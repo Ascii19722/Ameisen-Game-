@@ -130,6 +130,7 @@ function redrawTerrain() {
 // Je weniger Futter übrig ist, desto kleiner/kahler wird die Pflanze.
 function drawSources(g) {
   for (const s of colony.sources) {
+    if (hatPflanzenBilder(s.kind) && pflanzenBild(s, 0)) continue;   // eigene Bilder werden in drawPlants gezeichnet
     const top = columnTop(s.x), f = s.amount / s.max;
     const px = (x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(s.x + x, top + y, w, h); };
     if (s.kind === 'plant') {   // Blattpflanze: Stängel mit großen Blättern (werden weniger)
@@ -185,12 +186,50 @@ const itemScale = it => {
   return it.kind === 'leaf' || it.kind === 'petal' || it.kind === 'seed' || it.kind === 'meat' ? 1.6 : 1;
 };
 
+// Eigenes Bild zeichnen: verkleinert mit Glättung (sieht bei großen Zeichnungen besser aus),
+// vergrößert ohne (bleibt Pixel-Art)
+function drawPicture(g, img, x, y, w, h) {
+  g.imageSmoothingEnabled = w < img.naturalWidth;
+  g.drawImage(img, x, y, w, h);
+  g.imageSmoothingEnabled = false;
+}
+
+// Pflanzen mit eigenen Bildern (in Bildschirm-Auflösung, damit Details sichtbar bleiben)
+function drawPlants(g, cam, cw, ch, now) {
+  const s = cam.zoom;
+  for (const p of colony.sources) {
+    const b = hatPflanzenBilder(p.kind) && pflanzenBild(p, now);
+    if (!b) continue;
+    const h = b.hoehe * s, w = h * b.img.naturalWidth / b.img.naturalHeight;
+    const sx = (p.x + 0.5 - cam.x) * s + cw / 2, sy = (columnTop(p.x) - cam.y) * s + ch / 2;
+    if (sx + w / 2 < 0 || sx - w / 2 > cw || sy < 0 || sy - h > ch) continue;
+    drawPicture(g, b.img, sx - w / 2, sy - h, w, h);
+  }
+}
+
+// Eigenes Ameisen-Bild an der Stelle, an die vorher translate/rotate/scale gesetzt wurde (Füße bei 0,0)
+function drawAntPicture(g, b, s) {
+  const m = b.masse, w = m.breite * s, h = w * b.img.naturalHeight / b.img.naturalWidth;
+  if (m.schaut === 'links') g.scale(-1, 1);
+  drawPicture(g, b.img, -w / 2, -h * m.boden, w, h);
+  return [(m.maul[0] - 0.5) * w, (m.maul[1] - m.boden) * h];   // gilt im (evtl. gespiegelten) Bild
+}
+
 // Brut und Futter, die am Boden liegen
 function drawItems(g, cam, cw, ch, now) {
   const s = cam.zoom, k = s / SPRITE_RES;
   for (const list of [colony.waste, colony.food, colony.prey, colony.brood]) {
     for (const it of list) {
       if (it.by) continue;
+      if (it.kind === 'corpse') {   // eigenes „tot“-Bild?
+        const b = leichenBild(it);
+        if (b) {
+          const sx = (it.x + 0.5 - cam.x) * s + cw / 2, sy = (it.y + 1 - cam.y) * s + ch / 2;
+          if (sx < -60 || sy < -60 || sx > cw + 60 || sy > ch + 60) continue;
+          g.save(); g.translate(sx, sy); drawAntPicture(g, b, s); g.restore();
+          continue;
+        }
+      }
       const img = itemImage(it, now), sc = itemScale(it), size = img.width * k * sc;
       const sx = (it.x + 0.5 - cam.x) * s + cw / 2;
       const sy = (it.y + 1 - cam.y) * s + ch / 2 - ITEM_HALF[it.kind] * ITEM_SCALE * k * sc;
@@ -205,6 +244,7 @@ function drawAnts(g, cam, cw, ch) {
   const k = s / SPRITE_RES;   // Sprite-Pixel → Bildschirm
   const now = performance.now();
   g.imageSmoothingEnabled = false;
+  drawPlants(g, cam, cw, ch, now);
   drawItems(g, cam, cw, ch, now);
   for (const e of enemies) if (e.type === 'spider') drawSpider(g, e, cam, cw, ch, now);
   for (const a of ants.concat(enemies.filter(e => e.type === 'raider'))) {
@@ -213,18 +253,30 @@ function drawAnts(g, cam, cw, ch) {
     const jit = a.foe ? Math.sin(now / 25 + a.walk) * 0.3 : 0;
     const sx = (wx + jit - cam.x) * s + cw / 2, sy = (wy - cam.y) * s + ch / 2;
     if (sx < -60 || sy < -60 || sx > cw + 60 || sy > ch + 60) continue;
-    const frame = Math.floor(a.walk) % WALK_FRAMES;
-    const img = antSprites[a.caste][a.carry ? 1 : 0][frame];
     // Beim Umdrehen wird der Körper kurz schmal (dreht sich zu uns und wieder weg)
     const squash = a.turn > 0 ? Math.max(0.15, Math.abs(a.turn / 0.2 * 2 - 1)) : 1;
     g.save();
     g.translate(sx, sy);
     g.rotate(a.rot);
     g.scale(a.face * squash, 1);
-    g.drawImage(img, -SPRITE_SIZE * k / 2, -SPRITE_GROUND * k, SPRITE_SIZE * k, SPRITE_SIZE * k);
+    const pic = a.art && ameisenBild(a, now);
+    let mx, my;   // Maul: hier sitzt, was sie trägt
+    if (pic) {
+      [mx, my] = drawAntPicture(g, pic, s);
+    } else {
+      const img = spritesFor(a.art, a.caste)[a.carry ? 1 : 0][Math.floor(a.walk) % WALK_FRAMES];
+      const size = img.width * k;
+      g.drawImage(img, -size / 2, -Math.round(img.width * 0.62) * k, size, size);
+      const u = SPRITE_RES * casteLook(a.art, a.caste).size * k;
+      mx = 1.75 * u; my = -0.8 * u;
+    }
     if (a.load) {   // Futter oder Brut zwischen den Kiefern
-      const li = itemImage(a.load, now), u = SPRITE_RES * CASTES[a.caste].size * k, sc = 0.85 * itemScale(a.load), size = li.width * k * sc;
-      g.drawImage(li, 1.75 * u - size / 2, -0.8 * u - size / 2, size, size);
+      const li = itemImage(a.load, now), sc = 0.85 * itemScale(a.load), size = li.width * k * sc;
+      g.drawImage(li, mx - size / 2, my - size / 2, size, size);
+    } else if (pic && a.carry && !animBilder(a.art, a.caste, 'seite', 'tragen', false)) {
+      // eigenes Bild ohne „tragen“: Sandkorn ans Maul malen
+      const sand = itemImage({ kind: 'crumb' }, now), size = sand.width * k * 0.7;
+      g.drawImage(sand, mx - size / 2, my - size / 2, size, size);
     }
     g.restore();
   }

@@ -27,6 +27,13 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
 - `src/enemies.js` – Feinde (Spinne, rote Räuber-Ameisen) und Kampf
 - `src/save.js` – Speichern im Browser (localStorage), „Neue Kolonie“
 - `src/main.js` – Start, Spielschleife, Tasten, HUD
+- `src/arten.js` – Ameisen-Arten (Waldameise, Feuerameise, Honigameise, Bullet) + Suchwörter für Sorten,
+  Ansichten, Animationen. `src/pflanzen.js` – Futterpflanzen (neue Pflanze = neuer Eintrag).
+- `src/bilder.js` – EIGENE BILDER (PNG, ein Bild pro Animationsschritt, aus Claude Design): erkennt Art/Sorte/
+  Ansicht/Animation/Nummer am Datei- und Ordnernamen; ohne Bilder bleibt alles eingebaut (Waldameise pixelgleich).
+  Quellen: .exe liest `Bilder\Ameisen-Game` auf dem PC (electron/preload.js), Browser nutzt `bilder/` + `bilder/liste.js`
+  (`Bilderliste erstellen.bat`). Prüfen: `tools/bilder-pruefer.html` (Knopf „BILDER“), dort Regler für Größe/Boden.
+  Jede Ameise hat `art` (colony.art = Art der Kolonie).
 - `tools/bau-editor.html` – Bau-Editor (Sandkasten): Nutzer malt Gänge/Kammern (mit Aufgaben) im Spiel-Look,
   speichert als Bild/JSON oder startet das Spiel damit. Im Spiel per Knopf „BAU-EDITOR“ erreichbar.
   Bilder/Dateien, die der Nutzer daraus schickt = Vorlage, wie das Nest aussehen soll.
@@ -160,6 +167,13 @@ fieldnotes.sim (Details in START.md, Abschnitt "Vorbilder").
   (betteln um Futter) und rutschen dabei ein Stück. So animieren.
 - Vorschau-Bögen werden als HTML im Scratchpad gebaut (Formen-Parameter wie gW, gL, thW, headW, legLen, Farben).
 - Dem Nutzer bei Design-Fragen lieber Beispiele zur Auswahl zeigen und Tipps geben.
+
+## Ausbau-Ziel (Nutzerwunsch)
+- OPEN WORLD mit MEHREREN KOLONIEN verschiedener Arten gleichzeitig (Feuerameisen, Honigameisen, Bullet …).
+  Nutzer zeichnet Ameisen (Seite UND oben) und Pflanzen selbst in Claude Design als PNG-Einzelbilder.
+  Bisher gibt es nur EINE Kolonie (colony/ants/world.royal sind einzeln) – mehrere Kolonien = nächster großer Umbau.
+- Leistung: Taste I zeigt Bilder/s und Rechen-/Zeichenzeit. Laufkarte (walkMap in ants.js) wird nur bei
+  markDirty neu berechnet – Boden nie ohne markDirty ändern.
 
 ## Arbeitsweise
 - In Stufen bauen (siehe START.md). Pro Stufe nur das, was dazugehört.

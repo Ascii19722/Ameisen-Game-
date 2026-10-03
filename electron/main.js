@@ -1,7 +1,12 @@
 'use strict';
 // Startet die Ameisen-Sim als eigenes Programm (Electron): ein Fenster im Vollbild, ohne Menüleiste.
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+
+// Wo liegen Bilder- und Desktop-Ordner? (für preload.js, das eigene Bilder sucht)
+ipcMain.on('ameisen-pfade', e => {
+  e.returnValue = { pictures: app.getPath('pictures'), desktop: app.getPath('desktop'), app: path.join(__dirname, '..') };
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -11,6 +16,11 @@ function createWindow() {
     autoHideMenuBar: true,
     backgroundColor: '#140d08',
     title: 'Ameisen-Sim',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      sandbox: false,           // preload.js darf Ordner lesen (nur dort, das Spiel selbst nicht)
+      contextIsolation: true,
+    },
   });
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, '..', 'index.html'));

@@ -220,6 +220,7 @@ function updateTempoButtons() {
 
 // Bau-Editor: erst speichern, dann wechseln (von dort geht es mit „Zurück zum Spiel“ wieder hierher)
 document.getElementById('editor').addEventListener('click', () => { saveGame(); location.href = 'tools/bau-editor.html'; });
+document.getElementById('bilder').addEventListener('click', () => { saveGame(); location.href = 'tools/bilder-pruefer.html'; });
 
 document.getElementById('neu').addEventListener('click', e => { e.currentTarget.blur(); askNewColony(); });
 

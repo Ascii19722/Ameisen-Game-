@@ -28,7 +28,6 @@ const BROOD_SIZE = { nurse: 0.8, worker: 1, soldier: 1.35 };
 // Gewünschter Anteil der Sorten an der Kolonie
 const CASTE_SHARE = { nurse: 0.15, soldier: 0.08 };
 
-const SOURCE_FOOD = { plant: 'leaf', flower: 'petal', seeds: 'seed' };
 
 // Kammer-Aufgaben in der Reihenfolge, in der sie gebraucht werden
 const ROLE_ORDER = ['food', 'eggs', 'larvae', 'pupae', 'food', 'larvae', 'pupae', 'reserve'];
@@ -52,6 +51,7 @@ const colony = {
   waste: [],     // Abfall {kind: crumb/shell, x, y, room, lvl, by, claim, dumped, age}
   prey: [],      // tote Insekten {x, y, kind, need, portions, carriers, moving, wait}
   preyTimer: 60,
+  art: 'waldameise',   // welche Ameisen-Art diese Kolonie ist (siehe arten.js)
   dumpX: 0,      // Abfallhaufen draußen
   foodCap: 0,    // so viel Futter passt in die Vorratskammern (alle 5 s neu berechnet)
   capTimer: 0,
@@ -87,8 +87,11 @@ function addSource() {
   for (let k = 0; k < 12; k++) {
     const x = Math.round(ex + (Math.random() < 0.5 ? -1 : 1) * rand(50, 200));
     if (x < 6 || x >= W - 6 || colony.sources.some(s => Math.abs(s.x - x) < 14)) continue;
-    const max = randInt(6, 14);
-    colony.sources.push({ x, kind: ['plant', 'flower', 'seeds'][randInt(0, 2)], amount: max, max });
+    // nur Pflanzen, die man zeichnen kann (eingebaut oder mit eigenen Bildern)
+    const arten = Object.keys(PFLANZEN).filter(k => PFLANZEN[k].eingebaut || hatPflanzenBilder(k));
+    const kind = arten[randInt(0, arten.length - 1)], m = PFLANZEN[kind].menge || [6, 14];
+    const max = randInt(m[0], m[1]);
+    colony.sources.push({ x, kind, amount: max, max });
     return;
   }
 }
@@ -418,7 +421,7 @@ function jobTimer(a) {
     if (j.source) {
       if (j.source.amount <= 0) { endJob(a); decide(a); return; }
       j.source.amount--;
-      a.load = { kind: SOURCE_FOOD[j.source.kind], x: a.x, y: a.y, room: null, lvl: 0, by: a, claim: null };
+      a.load = { kind: PFLANZEN[j.source.kind].futter, x: a.x, y: a.y, room: null, lvl: 0, by: a, claim: null };
       j.room = roomFor('food');
       if (!j.room) { a.load = null; endJob(a); decide(a); return; }
     } else {
@@ -488,7 +491,7 @@ function updateColony(dt) {
     } else if (b.kind === 'cocoon' && b.age >= COCOON_TIME && !b.claim) {
       colony.brood.splice(k, 1);
       const by = Math.round(b.y);
-      if (world.cells[idx(b.x, by)] === AIR && ants.length < MAX_ANTS) ants.push(createAnt(b.x, by, b.caste || 'worker'));
+      if (world.cells[idx(b.x, by)] === AIR && ants.length < MAX_ANTS) ants.push(createAnt(b.x, by, b.caste || 'worker', colony.art));
       makeWaste('shell', b.x, by);
     }
   }

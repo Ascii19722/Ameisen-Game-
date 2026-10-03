@@ -47,11 +47,15 @@
   <div id="hilfe">Gang bis zur Oberfläche graben = neuer Eingang · Linke Maustaste: malen · Rechtsklick auf eine Kammer: Markierung entfernen · Mausrad: Zoom · Leertaste + Ziehen: verschieben</div>
 
   <script src="../src/world.js"></script>
+  <script src="../src/arten.js"></script>
+  <script src="../src/pflanzen.js"></script>
+  <script src="../bilder/liste.js"></script>
   <script src="../src/colony.js"></script>
   <script src="../src/ants.js"></script>
   <script src="../src/enemies.js"></script>
   <script src="../src/sky.js"></script>
   <script src="../src/sprites.js"></script>
+  <script src="../src/bilder.js"></script>
   <script src="../src/render.js"></script>
   <script src="../src/save.js"></script>
   <script>
@@ -207,7 +211,10 @@
     document.body.appendChild(a); a.click(); a.remove();
   }
   document.getElementById('spiel').onclick = () => { location.href = '../index.html'; };
-  document.getElementById('bild').onclick = () => download('mein-nest.png', canvas.toDataURL('image/png'));
+  document.getElementById('bild').onclick = () => {
+    try { download('mein-nest.png', canvas.toDataURL('image/png')); }
+    catch (e) { alert('Das Bild kann nicht gespeichert werden, solange eigene Pflanzen-Bilder angezeigt werden (Sicherheitsregel des Browsers).'); }
+  };
   document.getElementById('datei').onclick = () => {
     const data = { entranceX: world.entranceX, cells: packRuns(world.cells), marks };
     download('mein-nest.json', URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })));

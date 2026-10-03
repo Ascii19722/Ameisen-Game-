@@ -57,6 +57,8 @@ const colony = {
   capTimer: 0,
   buryCheck: 0,
   moveQueen: false,   // die Königin zieht gerade in eine neue Königskammer um
+  jobs: {},      // wie viele Ameisen gerade welche Aufgabe haben (wird mitgezählt statt jedes Mal neu)
+  queen: null,   // die Königin (wird einmal pro Schritt gesucht)
 };
 
 function resetColony() {
@@ -69,6 +71,7 @@ function resetColony() {
   colony.sourceTimer = 0;
   colony.waste = [];
   colony.moveQueen = false;
+  colony.jobs = {};
   colony.prey = [];
   colony.preyTimer = 60;
   colony.foodCap = 0;
@@ -276,9 +279,9 @@ function colonyTask(a) {
   if (!world.royal) return false;
   const nurse = a.caste === 'nurse';
   if (a.caste === 'soldier') return preyTask(a);
-  const queen = ants.find(q => q.caste === 'queen');
+  const queen = colony.queen;
   // 1. Die Königin hat Hunger
-  const feeders = ants.filter(b => b.job && b.job.type === 'queen').length;
+  const feeders = colony.jobs.queen || 0;
   if (queen && colony.queenFood < 3 && feeders < (colony.queenFood < 1 ? 3 : 2)) {
     const f = freeFood();
     if (f && startJob(a, { type: 'queen', item: f, queen })) return true;
@@ -309,7 +312,7 @@ function colonyTask(a) {
     if (f) { const room = roomFor('food'); if (room && startJob(a, { type: 'move', item: f, room })) return true; }
   }
   // 5. Futter holen, wenn der Vorrat knapp ist
-  const foragers = ants.filter(b => b.job && b.job.type === 'forage').length;
+  const foragers = colony.jobs.forage || 0;
   if (foodCount() + foragers < foodTarget() && foragers < Math.ceil(ants.length * 0.35) && Math.random() < 0.8) {
     const list = colony.sources.filter(s => s.amount > 0);
     if (list.length) {
@@ -328,6 +331,7 @@ function preyTask(a) {
 
 function startJob(a, job) {
   a.job = job;
+  colony.jobs[job.type] = (colony.jobs[job.type] || 0) + 1;
   job.phase = 'fetch';
   if (job.item) job.item.claim = a;
   if (job.larva) job.larva.feeder = a;
@@ -340,6 +344,7 @@ function startJob(a, job) {
 function endJob(a) {
   const j = a.job;
   if (!j) return;
+  colony.jobs[j.type]--;
   if (j.item && j.item.claim === a) j.item.claim = null;
   if (j.larva && j.larva.feeder === a) j.larva.feeder = null;
   if (j.prey) {
@@ -452,7 +457,7 @@ function jobTimer(a) {
 // ---------- Königin und Brut über die Zeit ----------
 
 function updateColony(dt) {
-  const queen = ants.find(q => q.caste === 'queen');
+  const queen = colony.queen;
   if (world.royal && queen) {
     colony.eatTimer -= dt;
     if (colony.eatTimer <= 0) { colony.eatTimer = QUEEN_EAT; colony.queenFood = Math.max(0, colony.queenFood - 1); }

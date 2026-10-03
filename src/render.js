@@ -261,6 +261,8 @@ function render(screenCtx, cw, ch, cam) {
   screenCtx.imageSmoothingEnabled = false;
   screenCtx.drawImage(off, cw / 2 - cam.x * s, ch / 2 - cam.y * s, W * s, H * s);
 
+  // Tagsüber gibt es keine Licht-Tönung: dann die Ameisen direkt auf den Bildschirm (spart zwei Durchgänge)
+  if (skyColors(sky.time).light[3] <= 0.005) { drawAnts(screenCtx, cam, cw, ch); return; }
   if (antLayer.width !== cw || antLayer.height !== ch) { antLayer.width = cw; antLayer.height = ch; }
   antCtx.clearRect(0, 0, cw, ch);
   drawAnts(antCtx, cam, cw, ch);

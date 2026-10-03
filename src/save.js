@@ -80,8 +80,7 @@ function loadGame() {
   world.moves = w.moves || 0;
   world.time = w.time || 0;
   world.entrances = w.entrances || [w.entranceX];
-  world.dirty = true;
-  world.dirtyRect = { x0: 0, y0: 0, x1: W - 1, y1: H - 1 };
+  markAllDirty();
 
   ants.length = 0;
   for (const d of data.ants) {
@@ -95,6 +94,7 @@ function loadGame() {
   colony.brood = c.brood.map(item);
   colony.waste = (c.waste || []).map(item);
   colony.prey = (c.prey || []).map(p => ({ ...p, carriers: [], moving: false, wait: 0 }));
+  colony.jobs = {};
   colony.dumpX = c.dumpX || world.entranceX + 70;
   colony.preyTimer = c.preyTimer || 60;
   // Lose Dinge fallen auf den Boden

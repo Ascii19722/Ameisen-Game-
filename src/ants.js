@@ -16,7 +16,7 @@ const DY = [0, 0, 1, -1, 1, -1, 1, -1];
 
 // Laufen geht überall, wo eine Wand höchstens 2 Pixel entfernt ist: So müssen die Ameisen nicht
 // jede kleine Nische umrunden, sondern gehen auch quer über Lücken und in der Gangmitte.
-function isWalkable(x, y) {
+function calcWalkable(x, y) {
   if (world.cells[y * W + x] !== AIR || y < 1) return false;
   for (let k = 0; k < 8; k++) if (solidAt(x + DX[k], y + DY[k])) return true;
   if (y < world.surface[x] - 1) return false;   // draußen nur am Boden, nicht durch die Luft
@@ -28,7 +28,22 @@ function isWalkable(x, y) {
   return false;
 }
 
+// Laufkarte: Ob man auf einem Feld laufen kann, wird gemerkt und nur dort neu berechnet,
+// wo sich der Boden geändert hat (spart bei der Wegsuche sehr viel Rechenzeit).
+const walkMap = new Uint8Array(N);
+function refreshWalk() {
+  const r = world.walkRect;
+  world.walkRect = null;
+  const x0 = Math.max(0, r.x0 - 2), y0 = Math.max(0, r.y0 - 2), x1 = Math.min(W - 1, r.x1 + 2), y1 = Math.min(H - 1, r.y1 + 2);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) walkMap[y * W + x] = calcWalkable(x, y) ? 1 : 0;
+}
+function isWalkable(x, y) {
+  if (world.walkRect) refreshWalk();
+  return walkMap[y * W + x] === 1;
+}
+
 function bfs(start, isGoal, maxNodes) {
+  if (world.walkRect) refreshWalk();
   bfsStamp++;
   let head = 0, tail = 0;
   bfsQueue[tail++] = start;
@@ -43,7 +58,7 @@ function bfs(start, isGoal, maxNodes) {
       const nx = x + DX[k], ny = y + DY[k];
       if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
       const j = ny * W + nx;
-      if (bfsMark[j] === bfsStamp || !isWalkable(nx, ny)) continue;
+      if (bfsMark[j] === bfsStamp || walkMap[j] !== 1) continue;
       if (k >= 4 && solidAt(nx, y) && solidAt(x, ny)) continue;   // nicht durch Ecken quetschen
       bfsMark[j] = bfsStamp;
       bfsPrev[j] = i;
@@ -102,11 +117,6 @@ function setPath(a, goal) {
   return true;
 }
 
-function antsAt(tip) {
-  let n = 0;
-  for (const a of ants) if (a.tip === tip) n++;
-  return n;
-}
 
 // Wo gräbt die Ameise an einer Grabstelle? An der offenen Sandwand, die dem nächsten Stück am nächsten ist.
 function tipFront(tip) {
@@ -139,7 +149,7 @@ function decide(a) {
   // Erst schauen, ob die Kolonie etwas braucht (Futter, Brut, Königin), sonst graben
   if (Math.random() < 0.9 && colonyTask(a)) return;
   // Eine Grabstelle aussuchen, an der noch Platz ist
-  const open = world.tips.filter(t => antsAt(t) < (t.kind === 'room' ? 8 : t.kind === 'queen' ? 6 : 4));
+  const open = world.tips.filter(t => t.ants < (t.kind === 'room' ? 8 : t.kind === 'queen' ? 6 : 4));
   if (open.length && Math.random() < 0.85) {
     // Der Schacht der Königin hat Vorrang, bis ihre Kammer fertig ist
     // Angefangene Kammern werden bevorzugt fertig gegraben
@@ -152,7 +162,7 @@ function decide(a) {
       const x = i % W, y = (i / W) | 0;
       return Math.hypot(x - fx, y - fy) < TUNNEL_R + 2.5;
     }, N);
-    if (setPath(a, goal)) { a.tip = tip; a.state = 'toDig'; return; }
+    if (setPath(a, goal)) { a.tip = tip; tip.ants++; a.state = 'toDig'; return; }
   }
   if (Math.random() < 0.35) { a.state = 'rest'; a.timer = rand(0.5, 3); return; }
   wander(a, 600);
@@ -351,17 +361,25 @@ function replan(a) {
 }
 
 // Körper zum Boden ausrichten: Füße zeigen zur festen Seite. Umdrehen, wenn sich die Laufrichtung umkehrt.
+// Richtung zum Boden nur neu berechnen, wenn die Ameise auf ein anderes Feld kommt (oder ab und zu,
+// falls neben ihr gegraben wurde)
 function orient(a, dt) {
-  let sx = 0, sy = 0;
-  for (let k = 0; k < 8; k++) {
-    if (solidAt(a.x + DX[k], a.y + DY[k])) { const l = Math.hypot(DX[k], DY[k]); sx += DX[k] / l; sy += DY[k] / l; }
+  if (a.ox !== a.x || a.oy !== a.y || --a.ot <= 0) {
+    a.ox = a.x; a.oy = a.y; a.ot = 10;
+    let sx = 0, sy = 0;
+    for (let k = 0; k < 8; k++) {
+      if (solidAt(a.x + DX[k], a.y + DY[k])) { const l = k < 4 ? 1 : Math.SQRT2; sx += DX[k] / l; sy += DY[k] / l; }
+    }
+    a.target = sx || sy ? Math.atan2(sy, sx) - Math.PI / 2 : null;
   }
-  if (sx || sy) {
-    const target = Math.atan2(sy, sx) - Math.PI / 2;
-    a.rot += angleTo(a.rot, target) * Math.min(1, dt * 10);
+  if (a.target !== null && a.rot !== a.target) {
+    const d = angleTo(a.rot, a.target);
+    if (Math.abs(d) < 0.002) a.rot = a.target;   // fertig gedreht
+    else a.rot += d * Math.min(1, dt * 10);
+    a.tx = Math.cos(a.rot); a.ty = Math.sin(a.rot);
   }
-  const tx = Math.cos(a.rot), ty = Math.sin(a.rot);
-  const d = a.mx * tx + a.my * ty;
+  if (a.tx === undefined) { a.tx = Math.cos(a.rot); a.ty = Math.sin(a.rot); }
+  const d = a.mx * a.tx + a.my * a.ty;
   if (Math.abs(d) > 0.3) {
     const f = d > 0 ? 1 : -1;
     if (f !== a.face) { a.face = f; a.turn = 0.2; }
@@ -426,6 +444,13 @@ function moveAlong(a, dt) {
 }
 
 function updateAnts(dt) {
+  // Einmal pro Schritt zählen statt bei jeder Entscheidung: Königin und Ameisen je Grabstelle
+  colony.queen = null;
+  for (const t of world.tips) t.ants = 0;
+  for (const a of ants) {
+    if (a.caste === 'queen') colony.queen = a;
+    if (a.tip) a.tip.ants++;
+  }
   for (const a of ants) if (!a.dead) updateAnt(a, dt);
   // Gestorbene Ameisen aus der Liste nehmen
   if (ants.some(a => a.dead)) {

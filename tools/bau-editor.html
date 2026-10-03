@@ -96,8 +96,7 @@
     world.cells.set(u.cells);
     marks.length = 0;
     marks.push(...u.marks);
-    world.dirtyRect = { x0: 0, y0: 0, x1: W - 1, y1: H - 1 };
-    world.dirty = true;
+    markAllDirty();
   }
 
   const toWorld = (sx, sy) => [cam.x + (sx - canvas.width / 2) / cam.zoom, cam.y + (sy - canvas.height / 2) / cam.zoom];

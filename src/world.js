@@ -46,6 +46,7 @@ const world = {
   moves: 0,                      // so oft ist die Königin schon umgezogen
   dirty: true,
   dirtyRect: null,
+  walkRect: null,                // hier muss die Laufkarte neu berechnet werden (siehe ants.js)
 };
 
 const idx = (x, y) => y * W + x;
@@ -77,11 +78,22 @@ function columnTop(x) {
   return H;
 }
 
+// Merkt sich, welcher Bereich sich geändert hat: dort wird neu gezeichnet und die Laufkarte neu berechnet
+function growRect(r, x0, y0, x1, y1) {
+  if (!r) return { x0, y0, x1, y1 };
+  r.x0 = Math.min(r.x0, x0); r.y0 = Math.min(r.y0, y0); r.x1 = Math.max(r.x1, x1); r.y1 = Math.max(r.y1, y1);
+  return r;
+}
 function markDirty(x0, y0, x1, y1) {
-  const r = world.dirtyRect;
-  if (!r) world.dirtyRect = { x0, y0, x1, y1 };
-  else { r.x0 = Math.min(r.x0, x0); r.y0 = Math.min(r.y0, y0); r.x1 = Math.max(r.x1, x1); r.y1 = Math.max(r.y1, y1); }
+  world.dirtyRect = growRect(world.dirtyRect, x0, y0, x1, y1);
+  world.walkRect = growRect(world.walkRect, x0, y0, x1, y1);
   world.dirty = true;
+}
+// Ganze Welt neu (nach dem Erzeugen oder Laden)
+function markAllDirty() {
+  world.dirtyRect = null;
+  world.walkRect = null;
+  markDirty(0, 0, W - 1, H - 1);
 }
 
 function wavyLine(base, amp) {
@@ -126,8 +138,7 @@ function generateWorld() {
   // Eingang und erste Grabstelle: die Königin gräbt zuerst tief nach unten
   carve(world.entranceX, SURFACE_Y + 1, TUNNEL_R);
   world.tips.push(newTip(world.entranceX, SURFACE_Y + 2, Math.PI / 2 + rand(-0.25, 0.25), rand(PLAN.queenDepth[0], PLAN.queenDepth[1]) / 0.8, 'queen'));
-  world.dirty = true;
-  world.dirtyRect = { x0: 0, y0: 0, x1: W - 1, y1: H - 1 };
+  markAllDirty();
 }
 
 function makeTexture() {
@@ -207,7 +218,7 @@ function carve(cx, cy, r, floorY = Infinity) {
 }
 
 function newTip(x, y, dir, max, kind) {
-  return { x, y, dir, bias: dir, len: 0, max, kind, wall: 0, stuck: 0, blobs: null, goal: null, through: false };
+  return { x, y, dir, bias: dir, len: 0, max, kind, wall: 0, stuck: 0, blobs: null, goal: null, through: false, ants: 0 };
 }
 
 // Weltrand und Steine: werden erst bemerkt, wenn die Ameise dagegen stößt (kein Röntgenblick)

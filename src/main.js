@@ -7,10 +7,14 @@ let speed = 1;
 let paused = false;
 const cam = { x: 0, y: 0, zoom: 1 };   // Kamera: Mittelpunkt in Welt-Pixeln und Zoom
 
+// Bildschirm-Pixel pro CSS-Pixel. Höchstens so viele Pixel wie bei Full-HD: Bei 4K-Bildschirmen müsste
+// sonst die vierfache Fläche gezeichnet werden (das Bild wird dann ohne Glättung hochskaliert).
+let pxScale = 1;
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(window.innerWidth * dpr);
-  canvas.height = Math.round(window.innerHeight * dpr);
+  pxScale = Math.min(dpr, Math.sqrt(1920 * 1080 / (window.innerWidth * window.innerHeight)));
+  canvas.width = Math.round(window.innerWidth * pxScale);
+  canvas.height = Math.round(window.innerHeight * pxScale);
   clampCam();
 }
 window.addEventListener('resize', resize);
@@ -43,17 +47,15 @@ function zoomAt(factor, sx, sy) {
 }
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  const dpr = window.devicePixelRatio || 1;
-  zoomAt(Math.pow(1.0015, -e.deltaY), e.offsetX * dpr, e.offsetY * dpr);
+  zoomAt(Math.pow(1.0015, -e.deltaY), e.offsetX * pxScale, e.offsetY * pxScale);
 }, { passive: false });
 let drag = null;
 canvas.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY }; canvas.style.cursor = 'grabbing'; });
 window.addEventListener('mouseup', () => { drag = null; canvas.style.cursor = 'grab'; });
 window.addEventListener('mousemove', e => {
   if (!drag) return;
-  const dpr = window.devicePixelRatio || 1;
-  cam.x -= (e.clientX - drag.x) * dpr / cam.zoom;
-  cam.y -= (e.clientY - drag.y) * dpr / cam.zoom;
+  cam.x -= (e.clientX - drag.x) * pxScale / cam.zoom;
+  cam.y -= (e.clientY - drag.y) * pxScale / cam.zoom;
   drag = { x: e.clientX, y: e.clientY };
   clampCam();
 });
@@ -71,6 +73,7 @@ window.addEventListener('keydown', e => {
   if (e.key === '-') zoomAt(0.8, canvas.width / 2, canvas.height / 2);
   if (e.key === '0') resetCam();
   if (e.key === 'n' || e.key === 'N') askNewColony();
+  if (e.key === 'i' || e.key === 'I') perf.show = !perf.show;
   keys.add(e.key.toLowerCase());
 });
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -146,23 +149,45 @@ function drawHud() {
   // Tastenhilfe klein unten links
   ctx.font = `${Math.round(13 * u)}px system-ui, sans-serif`;
   ctx.fillStyle = 'rgba(60, 45, 35, 0.6)';
-  ctx.fillText('Mausrad/+−: Zoom · Ziehen/Pfeile/WASD: verschieben · 0: zurück · N: neue Kolonie · Leertaste: Pause · 1–5: Tempo · F: Vollbild',
+  ctx.fillText('Mausrad/+−: Zoom · Ziehen/Pfeile/WASD: verschieben · 0: zurück · N: neue Kolonie · Leertaste: Pause · 1–5: Tempo · F: Vollbild · I: Leistung',
     16 * u, canvas.height - 14 * u);
+}
+
+// Leistungsanzeige (Taste I): Bilder pro Sekunde und wie lange Rechnen und Zeichnen dauern
+const perf = { show: false, fps: 60, sim: 0, draw: 0 };
+function drawPerf() {
+  const u = canvas.height / 1080;
+  const text = `${Math.round(perf.fps)} Bilder/s · Rechnen ${perf.sim.toFixed(1)} ms · Zeichnen ${perf.draw.toFixed(1)} ms · ${ants.length} Ameisen`;
+  ctx.font = `600 ${Math.round(15 * u)}px system-ui, sans-serif`;
+  const w = ctx.measureText(text).width + 24 * u;
+  ctx.fillStyle = 'rgba(240, 233, 220, 0.94)';
+  roundRect(canvas.width - w - 24 * u, canvas.height - 56 * u, w, 30 * u, 8 * u);
+  ctx.fill();
+  ctx.fillStyle = '#3e3128';
+  ctx.textAlign = 'left';
+  ctx.fillText(text, canvas.width - w - 12 * u, canvas.height - 36 * u);
 }
 
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
+  perf.fps += ((now - last > 0 ? 1000 / (now - last) : 60) - perf.fps) * 0.05;
   last = now;
   // Zeitraffer: bis 16 Rechenschritte pro Bild, darüber werden die Schritte größer (sonst ruckelt es)
+  const t0 = performance.now();
   if (!paused) {
     const n = Math.min(speed, 16), sub = dt * speed / n;
     for (let k = 0; k < n; k++) step(sub);
   }
+  const t1 = performance.now();
   moveCam(dt);
   render(ctx, canvas.width, canvas.height, cam);
   drawHud();
+  if (perf.show) drawPerf();
   updateTempoButtons();
+  const t2 = performance.now();
+  perf.sim += (t1 - t0 - perf.sim) * 0.05;
+  perf.draw += (t2 - t1 - perf.draw) * 0.05;
   requestAnimationFrame(frame);
 }
 

@@ -53,6 +53,9 @@ const colony = {
   prey: [],      // tote Insekten {x, y, kind, need, portions, carriers, moving, wait}
   preyTimer: 60,
   dumpX: 0,      // Abfallhaufen draußen
+  foodCap: 0,    // so viel Futter passt in die Vorratskammern (alle 5 s neu berechnet)
+  capTimer: 0,
+  buryCheck: 0,
   moveQueen: false,   // die Königin zieht gerade in eine neue Königskammer um
 };
 
@@ -68,6 +71,9 @@ function resetColony() {
   colony.moveQueen = false;
   colony.prey = [];
   colony.preyTimer = 60;
+  colony.foodCap = 0;
+  colony.capTimer = 0;
+  colony.buryCheck = 0;
   colony.dumpX = Math.round(world.entranceX + (Math.random() < 0.5 ? -1 : 1) * rand(60, 90));
   for (let k = 0; k < 5; k++) addSource();
   resetEnemies();
@@ -130,7 +136,7 @@ function roomFor(role) {
   return best;
 }
 function misplaced(item) {
-  if (isWaste(item)) return item.dumped ? false : bestRole('waste') ? !item.room || item.room.role !== 'waste' : !item.dumped;
+  if (isWaste(item)) return !item.dumped && (!bestRole('waste') || !item.room || item.room.role !== 'waste');
   if (!item.room || item.room.role !== bestRole(roleOf(item))) return true;
   const warm = warmRoom(item.room.role);
   return !!warm && warm !== item.room;
@@ -235,7 +241,7 @@ function foodCapacity() {
 // Die Vorratskammer soll immer etwa halb voll sein
 function foodTarget() {
   const need = 8 + Math.round(ants.length * 0.25) + colony.brood.filter(b => b.kind === 'larva').length;
-  return Math.max(need, Math.round((colony.foodCap || 0) * 0.5));
+  return Math.max(need, Math.round(colony.foodCap * 0.5));
 }
 // Zufällig eins aus allen passenden Dingen wählen. (Immer das erste zu nehmen wäre schlecht:
 // liegt genau das unerreichbar, würden alle Ameisen immer wieder daran scheitern.)
@@ -358,31 +364,23 @@ function routeJob(a) {
   let goal = -1;
   if (j.phase === 'fetch') {
     if (j.source || j.prey) {
-      const sx = Math.round(j.source ? j.source.x : j.prey.x), top = columnTop(sx), r = j.prey ? 3 : 1;
+      const sx = Math.round(j.source ? j.source.x : j.prey.x), r = j.prey ? 3 : 1;
       goal = bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - sx) <= r && y < columnTop(x) && y >= columnTop(x) - 2; }, N);
     } else {
       const it = j.item;
       goal = bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - it.x) <= 2 && Math.abs(y - it.y) <= 3; }, N);
     }
   } else {
-    let tx, ty, r = 2.5;
-    if (j.type === 'queen') { tx = j.queen.x; ty = j.queen.y; r = 3.5; }
-    else if (j.type === 'larva') { tx = j.larva.x; ty = j.larva.y; }
+    const near = (tx, ty, r) => bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - tx) <= r && Math.abs(y - ty) <= 2.5; }, N);
+    if (j.type === 'queen') goal = near(j.queen.x, j.queen.y, 3.5);
+    else if (j.type === 'larva') goal = near(j.larva.x, j.larva.y, 2.5);
     else if (j.dumpX !== undefined) {   // Abfallhaufen draußen
       const dx = j.dumpX;
       goal = bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - dx) <= 1 && y < columnTop(x) && y >= columnTop(x) - 2; }, N);
-      if (!setPath(a, goal)) return false;
-      a.state = j.phase;
-      return true;
-    }
-    else {   // irgendwo in der Kammer (auch wenn sie unregelmäßig ausgegraben ist)
+    } else {   // irgendwo in der Kammer (auch wenn sie unregelmäßig ausgegraben ist)
       const c = j.room;
       goal = bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - c.cx) <= 10 && y >= c.floor - 7 && y <= c.floor + 1; }, N);
-      if (!setPath(a, goal)) return false;
-      a.state = j.phase;
-      return true;
     }
-    goal = bfs(start, i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - tx) <= r && Math.abs(y - ty) <= 2.5; }, N);
   }
   if (!setPath(a, goal)) return false;
   a.state = j.phase;
@@ -497,10 +495,10 @@ function updateColony(dt) {
     if ((w.dumped && w.age > 400) || (w.room && w.age > 1500)) { liftItem(w); colony.waste.splice(k, 1); }
   }
   updatePrey(dt);
-  colony.capTimer = (colony.capTimer || 0) - dt;
+  colony.capTimer -= dt;
   if (colony.capTimer <= 0) { colony.capTimer = 5; colony.foodCap = foodCapacity(); }
   // Verschüttete Dinge (z. B. unter dem Sandhügel) kommen wieder nach oben
-  colony.buryCheck = (colony.buryCheck || 0) - dt;
+  colony.buryCheck -= dt;
   if (colony.buryCheck <= 0) {
     colony.buryCheck = 3;
     for (const list of [colony.food, colony.brood, colony.waste]) {

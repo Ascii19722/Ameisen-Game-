@@ -11,7 +11,7 @@ function resize() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(window.innerWidth * dpr);
   canvas.height = Math.round(window.innerHeight * dpr);
-  if (world.dug !== undefined && cam.zoom) clampCam();
+  clampCam();
 }
 window.addEventListener('resize', resize);
 resize();
@@ -76,11 +76,11 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 
 function moveCam(dt) {
-  const v = 500 / cam.zoom * dt * (canvas.width / 1920);
-  if (keys.has('arrowleft') || keys.has('a')) cam.x -= v * 3;
-  if (keys.has('arrowright') || keys.has('d')) cam.x += v * 3;
-  if (keys.has('arrowup') || keys.has('w')) cam.y -= v * 3;
-  if (keys.has('arrowdown') || keys.has('s')) cam.y += v * 3;
+  const v = 1500 / cam.zoom * dt * (canvas.width / 1920);
+  if (keys.has('arrowleft') || keys.has('a')) cam.x -= v;
+  if (keys.has('arrowright') || keys.has('d')) cam.x += v;
+  if (keys.has('arrowup') || keys.has('w')) cam.y -= v;
+  if (keys.has('arrowdown') || keys.has('s')) cam.y += v;
   clampCam();
 }
 
@@ -129,8 +129,7 @@ function drawHud() {
   ctx.textAlign = 'left';
   ctx.fillText(small, x + 20 * u, y + 28 * u);
   ctx.textAlign = 'right';
-  ctx.fillText(clock,
-    x + w - 20 * u, y + 28 * u);
+  ctx.fillText(clock, x + w - 20 * u, y + 28 * u);
 
   ctx.textAlign = 'left';
   ctx.fillStyle = '#3e3128';

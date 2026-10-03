@@ -8,12 +8,10 @@
     html, body { margin: 0; height: 100%; background: #140d08; overflow: hidden; }
     canvas { display: block; width: 100vw; height: 100vh; }
     /* Knopf im Stil der Info-Karte */
-    #neu { position: fixed; top: 24px; right: 24px; padding: 10px 18px; border-radius: 10px;
+    #neu, #editor { position: fixed; top: 24px; right: 24px; padding: 10px 18px; border-radius: 10px;
       border: 2px solid rgba(120, 100, 80, 0.35); background: rgba(240, 233, 220, 0.94);
       color: #3e3128; font: 700 15px system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer; }
-    #editor { position: fixed; top: 24px; right: 210px; padding: 10px 18px; border-radius: 10px;
-      border: 2px solid rgba(120, 100, 80, 0.35); background: rgba(240, 233, 220, 0.94);
-      color: #3e3128; font: 700 15px system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer; }
+    #editor { right: 210px; }
     #neu:hover, #editor:hover, #tempo button:hover { background: rgba(250, 244, 232, 0.98); }
     /* Zeitsteuerung */
     #tempo { position: fixed; top: 76px; right: 24px; display: flex; gap: 6px; }

@@ -108,7 +108,6 @@ function antsAt(tip) {
   return n;
 }
 
-// Wo gräbt die Ameise an einer Grabstelle? Kurz vor der Spitze, in Grabrichtung.
 // Wo gräbt die Ameise an einer Grabstelle? An der offenen Sandwand, die dem nächsten Stück am nächsten ist.
 function tipFront(tip) {
   let d = null, floorY = Infinity;
@@ -268,9 +267,8 @@ function wander(a, nodes) {
 
 // Sand nach oben tragen: zum nächsten Eingang, dicht daneben ablegen → Hügel, der mit dem Nest wächst
 function chooseDropColumn(a) {
-  const list = world.entrances && world.entrances.length ? world.entrances : [world.entranceX];
-  let ex = list[0];
-  for (const e of list) if (Math.abs(e - a.x) < Math.abs(ex - a.x)) ex = e;
+  let ex = world.entrances[0];
+  for (const e of world.entrances) if (Math.abs(e - a.x) < Math.abs(ex - a.x)) ex = e;
   for (let k = 0; k < 6; k++) {
     const side = Math.random() < 0.5 ? -1 : 1;
     const x = Math.max(3, Math.min(W - 4, ex + side * (3 + Math.floor(Math.random() * Math.random() * 40))));

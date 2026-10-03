@@ -35,7 +35,6 @@ const LAYER_COLORS = [
   [[178, 166, 140], [198, 188, 164]],   // grauer Untergrund
 ];
 const TUNNEL_BROWN = [124, 86, 56];
-const LOOSE_COLOR = [228, 214, 180];
 
 function cellIsRock(x, y) {
   return x >= 0 && y >= 0 && x < W && y < H && world.cells[y * W + x] === ROCK;

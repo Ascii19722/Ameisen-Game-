@@ -3,7 +3,7 @@
 // Feinde und Kampf. Kein Game Over: Der Königin passiert nichts, und die Kolonie erholt sich.
 //  Spinne: läuft oben an der Oberfläche entlang und jagt Ameisen, die draußen unterwegs sind.
 //          Ist sie verletzt oder satt, zieht sie wieder ab.
-//  Räuber: rote fremde Ameisen in kleinen Gruppen. Sie dringen ins Nest ein, schnappen sich Brut
+//  Räuber: schwarze fremde Ameisen in kleinen Gruppen. Sie dringen ins Nest ein, schnappen sich Brut
 //          und rennen damit davon.
 // Ameisen wehren sich, wenn ein Feind neben ihnen ist; Soldatinnen eilen gezielt herbei.
 
@@ -39,7 +39,7 @@ function spawnEnemies() {
     for (let k = 0; k < n; k++) {
       const rx = fromLeft ? 3 + k * 3 : W - 4 - k * 3;
       const e = createAnt(rx, columnTop(rx) - 1, 'raider');
-      Object.assign(e, { type: 'raider', state: 'come', foe: null, speed: rand(7, 9) });
+      Object.assign(e, { type: 'raider', state: 'come', speed: rand(7, 9) });
       enemies.push(e);
     }
   }

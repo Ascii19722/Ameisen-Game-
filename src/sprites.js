@@ -11,8 +11,6 @@ const SPRITE_GROUND = Math.round(SPRITE_SIZE * 0.62);   // Bodenlinie im Bild
 const WALK_FRAMES = 8;
 
 const C = {
-  black: [26, 18, 13], shine: [84, 62, 46], leg: [34, 24, 16], far: [58, 44, 34],
-  grey: [52, 48, 50], greyShine: [112, 106, 110], greyLeg: [40, 38, 40], greyFar: [82, 78, 80],
   plate: [96, 58, 36], eye: [10, 6, 4], ocelli: [150, 120, 90], scar: [90, 70, 56],
   grain: [250, 240, 214], grainEdge: [120, 96, 70],
 };
@@ -173,13 +171,14 @@ function drawSideAnt(g, ph, p, carry) {
   legs(false);
 }
 
-// Halbdurchsichtige Kanten entfernen und auf feste Farben runden → echte Pixel-Art
-function pixelateSprite(g, palette) {
-  const img = g.getImageData(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+// Halbdurchsichtige Kanten entfernen und auf feste Farben runden → echte Pixel-Art.
+// unpremul: Farbe vorher durch die Deckkraft teilen (so sind die Ameisen-Bilder entstanden)
+function pixelate(g, w, h, palette, unpremul = false) {
+  const img = g.getImageData(0, 0, w, h);
   const d = img.data;
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
-    const a = d[i + 3] / 255, r = d[i] / a, gg = d[i + 1] / a, b = d[i + 2] / a;
+    const a = unpremul ? d[i + 3] / 255 : 1, r = d[i] / a, gg = d[i + 1] / a, b = d[i + 2] / a;
     let best = palette[0], bd = Infinity;
     for (const c of palette) {
       const e = (c[0] - r) ** 2 + (c[1] - gg) ** 2 + (c[2] - b) ** 2;
@@ -204,7 +203,7 @@ function buildSideSprites() {
         g.translate(SPRITE_SIZE / 2, SPRITE_GROUND - 1.05 * SPRITE_RES * p.size);
         g.scale(SPRITE_RES * p.size, SPRITE_RES * p.size);
         drawSideAnt(g, f / WALK_FRAMES * Math.PI * 2, p, carry === 1);
-        pixelateSprite(g, palette);
+        pixelate(g, SPRITE_SIZE, SPRITE_SIZE, palette, true);
         antSprites[name][carry][f] = cv;
       }
     }
@@ -333,17 +332,7 @@ function buildItemSprites() {
     g.scale(ITEM_SCALE, ITEM_SCALE);
     fn(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    const img = g.getImageData(0, 0, size, size), d = img.data;
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
-      let best = pal[0], bd = Infinity;
-      for (const c of pal) {
-        const e = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2;
-        if (e < bd) { bd = e; best = c; }
-      }
-      d[i] = best[0]; d[i + 1] = best[1]; d[i + 2] = best[2]; d[i + 3] = 255;
-    }
-    g.putImageData(img, 0, 0);
+    pixelate(g, size, size, pal);
     return cv;
   };
   for (const [kind, fn] of Object.entries(ITEM_DRAW)) itemSprites[kind] = [make(fn)];
@@ -403,14 +392,7 @@ const spiderSprites = [];
     g.scale(SPIDER_SCALE, SPIDER_SCALE);
     drawSpiderPose(g, f / 8 * Math.PI * 2);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    const img = g.getImageData(0, 0, SPIDER_W, SPIDER_H), d = img.data;
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
-      let best = pal[0], bd = Infinity;
-      for (const c of pal) { const e = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2; if (e < bd) { bd = e; best = c; } }
-      d[i] = best[0]; d[i + 1] = best[1]; d[i + 2] = best[2]; d[i + 3] = 255;
-    }
-    g.putImageData(img, 0, 0);
+    pixelate(g, SPIDER_W, SPIDER_H, pal);
     spiderSprites.push(cv);
   }
 })();

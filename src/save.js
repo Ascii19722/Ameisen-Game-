@@ -42,7 +42,7 @@ function saveGame() {
         surface: Array.from(world.surface), layers: world.layers.map(l => Array.from(l)),
         tips: world.tips, pts: world.pts, branchStarts: world.branchStarts,
         chambers: world.chambers.map(c => ({ cx: c.cx, cy: c.cy, floor: c.floor, royal: c.royal, role: c.role })),
-        entranceX: world.entranceX, dug: world.dug, moves: world.moves || 0, time: world.time || 0, entrances: world.entrances,
+        entranceX: world.entranceX, dug: world.dug, moves: world.moves, time: world.time, entrances: world.entrances,
       },
       ants: ants.map(a => ({ x: a.x, y: a.y, caste: a.caste, speed: a.speed })),
       colony: {

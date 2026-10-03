@@ -40,7 +40,10 @@ const world = {
   branchStarts: [],
   royal: null,                   // Königskammer
   entranceX: 0,
+  entrances: [],                 // alle Eingänge (x-Positionen)
   dug: 0,
+  time: 0,                       // Spielzeit in Sekunden (für aufgegebene Baustellen)
+  moves: 0,                      // so oft ist die Königin schon umgezogen
   dirty: true,
   dirtyRect: null,
 };
@@ -101,6 +104,8 @@ function generateWorld() {
   world.branchStarts = [];
   world.royal = null;
   world.dug = 0;
+  world.time = 0;
+  world.moves = 0;
 
   const ground = H - SURFACE_Y;
   for (let x = 0; x < W; x++) {
@@ -327,13 +332,13 @@ function digStep(tip, ax, ay, budget) {
     if (tip.len % 3 === 0 && tip.kind !== 'stub') world.pts.push([tip.x, tip.y, tip.dir]);
     // Ausgang erreicht die Oberfläche: neuer Eingang
     if (tip.kind === 'exit' && tip.y <= world.surface[Math.round(tip.x)] + 1) {
-      (world.entrances || (world.entrances = [world.entranceX])).push(Math.round(tip.x));
+      world.entrances.push(Math.round(tip.x));
       removeTip(tip);
       break;
     }
     if (tip.len >= tip.max) endTip(tip, !tip.through);
   }
-  if (n) tip.touched = world.time || 0;
+  if (n) tip.touched = world.time;
   return n;
 }
 
@@ -414,20 +419,18 @@ function digRoomStep(tip, ax, ay, budget) {
     }
     tip.blobs.shift();
   }
-  if (n) tip.touched = world.time || 0;
+  if (n) tip.touched = world.time;
   if (!tip.blobs.length) finishRoom(tip);
   return n;
 }
 
 function finishRoom(tip) {
-  {
-    removeTip(tip);
-    const ch = { cx: tip.cx, cy: tip.cy, floor: tip.floor, id: world.chambers.length, royal: tip.royal };
-    world.chambers.push(ch);
-    if (tip.royal) world.royal = ch;
-    if (tip.forQueen && world.royal && ch.cy > world.royal.cy + 15) moveRoyal(ch);
-    else assignRole(ch);
-  }
+  removeTip(tip);
+  const ch = { cx: tip.cx, cy: tip.cy, floor: tip.floor, id: world.chambers.length, royal: tip.royal };
+  world.chambers.push(ch);
+  if (tip.royal) world.royal = ch;
+  if (tip.forQueen && world.royal && ch.cy > world.royal.cy + 15) moveRoyal(ch);
+  else assignRole(ch);
 }
 
 // Neue, tiefere (sicherere) Königskammer: die alte bekommt eine andere Aufgabe,
@@ -440,7 +443,7 @@ function moveRoyal(ch) {
   ch.royal = true;
   ch.role = 'queen';
   world.royal = ch;
-  world.moves = (world.moves || 0) + 1;
+  world.moves++;
   colony.moveQueen = true;
 }
 
@@ -449,7 +452,7 @@ const nearRoyal = p => world.royal && Math.hypot(p[0] - world.royal.cx, (p[1] - 
 
 // Neue Grabstellen nach dem Bauplan: erst tief, dann (mit größerem Nest) in die Breite
 function updatePlan(dt) {
-  world.time = (world.time || 0) + dt;
+  world.time += dt;
   // Baustellen, an denen lange nichts mehr weitergeht (Stein, Weltrand, unerreichbar), werden aufgegeben
   for (const t of world.tips.slice()) {
     if (t.touched === undefined) t.touched = world.time;
@@ -492,7 +495,7 @@ function updatePlan(dt) {
   }
   if (!world.royal) return;
   // Wächst die Kolonie, graben sie weiter unten eine neue, sicherere Königskammer
-  if ((world.moves || 0) < PLAN.royalMoves && ants.length >= 60 * ((world.moves || 0) + 1) && world.royal.cy < H - 60 && !colony.moveQueen &&
+  if (world.moves < PLAN.royalMoves && ants.length >= 60 * (world.moves + 1) && world.royal.cy < H - 60 && !colony.moveQueen &&
       !world.tips.some(t => t.forQueen) && Math.random() < dt * 0.05) {
     // eine der tiefsten Stellen (zufällig, damit ein Fehlversuch nicht immer wieder gleich endet)
     const deepest = world.pts.filter(p => !nearRoyal(p) && p[1] < H - 15).sort((p, q) => q[1] - p[1]).slice(0, 8);
@@ -504,7 +507,7 @@ function updatePlan(dt) {
     }
   }
   // Mit wachsender Kolonie neue Ausgänge nach oben – dort, wo Futter wächst und noch kein Eingang ist
-  const ents = world.entrances || (world.entrances = [world.entranceX]);
+  const ents = world.entrances;
   if (ents.length < Math.min(4, 1 + Math.floor(ants.length / 50)) && !world.tips.some(t => t.kind === 'exit') && Math.random() < dt * 0.05) {
     const far = colony.sources.filter(q => q.amount > 0 && Math.min(...ents.map(e => Math.abs(e - q.x))) > 40);
     if (far.length) {

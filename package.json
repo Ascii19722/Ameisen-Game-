@@ -1,0 +1,8 @@
+{
+  "name": "ameisen-sim",
+  "productName": "Ameisen-Sim",
+  "version": "0.5.0",
+  "description": "Pixel-Art-Ameisenkolonie zum Zuschauen",
+  "main": "electron/main.js",
+  "private": true
+}

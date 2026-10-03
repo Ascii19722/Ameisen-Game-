@@ -1,0 +1,124 @@
+'use strict';
+
+// Speichern im Browser (localStorage): Boden, Gänge, Kammern, Ameisen, Brut, Futter und Tageszeit.
+// Gespeichert wird automatisch alle 20 Sekunden und beim Schließen.
+const SAVE_KEY = 'ameisen-sim-v1';
+
+// Lange Zahlenreihen kurz machen: [Wert, Anzahl, Wert, Anzahl, …]
+function packRuns(arr) {
+  const out = [];
+  let v = arr[0], n = 0;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === v) n++;
+    else { out.push(v, n); v = arr[i]; n = 1; }
+  }
+  out.push(v, n);
+  return out;
+}
+function unpackRuns(runs, arr) {
+  let i = 0;
+  for (let k = 0; k < runs.length; k += 2) { arr.fill(runs[k], i, i + runs[k + 1]); i += runs[k + 1]; }
+}
+
+function itemData(it) {
+  const carrier = it.by;
+  const d = { kind: it.kind, x: carrier ? carrier.x : it.x, y: carrier ? carrier.y : it.y, lvl: carrier ? 0 : it.lvl,
+    room: carrier || !it.room ? -1 : world.chambers.indexOf(it.room) };
+  if (it.caste) d.caste = it.caste;
+  if (it.art) d.art = it.art;
+  if (it.dumped) d.dumped = true;
+  if (it.age !== undefined) { d.age = it.age; d.fed = it.fed; d.lastFed = it.lastFed; d.ph = it.ph; }
+  return d;
+}
+
+function saveGame() {
+  try {
+    // Was gerade getragen wird, auch mitspeichern
+    const carried = ants.filter(a => a.load).map(a => a.load);
+    const food = colony.food.concat(carried.filter(it => !colony.food.includes(it) && listOf(it) === colony.food));
+    const data = {
+      v: 1,
+      world: {
+        cells: packRuns(world.cells), tex: packRuns(world.tex),
+        surface: Array.from(world.surface), layers: world.layers.map(l => Array.from(l)),
+        tips: world.tips, pts: world.pts, branchStarts: world.branchStarts,
+        chambers: world.chambers.map(c => ({ cx: c.cx, cy: c.cy, floor: c.floor, royal: c.royal, role: c.role })),
+        entranceX: world.entranceX, dug: world.dug, moves: world.moves, time: world.time, entrances: world.entrances,
+      },
+      ants: ants.map(a => ({ x: a.x, y: a.y, caste: a.caste, art: a.art, speed: a.speed })),
+      colony: {
+        food: food.map(itemData), brood: colony.brood.map(itemData), sources: colony.sources,
+        waste: colony.waste.map(itemData), dumpX: colony.dumpX, preyTimer: colony.preyTimer,
+        prey: colony.prey.map(p => ({ x: p.x, y: p.y, kind: p.kind, need: p.need, portions: p.portions })),
+        art: colony.art, queenFood: colony.queenFood, eatTimer: colony.eatTimer, layTimer: colony.layTimer,
+      },
+      sky: { time: sky.time, day: sky.day },
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    return true;
+  } catch (e) {
+    return false;   // z. B. Speicher voll oder gesperrt: dann eben nicht speichern
+  }
+}
+
+function loadGame() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return false; }
+  if (!data || data.v !== 1) return false;
+  const w = data.world;
+  unpackRuns(w.cells, world.cells);
+  unpackRuns(w.tex, world.tex);
+  world.surface.set(w.surface);
+  w.layers.forEach((l, k) => { world.layers[k] = Int16Array.from(l); });
+  for (let i = 0; i < N; i++) world.grain[i] = Math.random();
+  world.tips = w.tips;
+  world.pts = w.pts;
+  world.branchStarts = w.branchStarts;
+  world.chambers = w.chambers.map((c, k) => ({ ...c, id: k }));
+  world.royal = world.chambers.find(c => c.royal) || null;
+  world.entranceX = w.entranceX;
+  world.dug = w.dug;
+  world.moves = w.moves || 0;
+  world.time = w.time || 0;
+  world.entrances = w.entrances || [w.entranceX];
+  markAllDirty();
+
+  ants.length = 0;
+  for (const d of data.ants) {
+    const a = createAnt(d.x, d.y, d.caste, d.art || 'waldameise');
+    a.speed = d.speed;
+    ants.push(a);
+  }
+  const item = d => ({ ...d, room: d.room >= 0 ? world.chambers[d.room] : null, by: null, claim: null, feeder: null });
+  const c = data.colony;
+  colony.food = c.food.map(item);
+  colony.brood = c.brood.map(item);
+  colony.waste = (c.waste || []).map(item);
+  colony.prey = (c.prey || []).map(p => ({ ...p, carriers: [], moving: false, wait: 0 }));
+  colony.jobs = {};
+  colony.art = c.art || 'waldameise';
+  colony.dumpX = c.dumpX || world.entranceX + 70;
+  colony.preyTimer = c.preyTimer || 60;
+  // Lose Dinge fallen auf den Boden
+  for (const it of colony.food.concat(colony.brood, colony.waste)) if (!it.room) { const dumped = it.dumped; dropLoose(it, it.x, Math.round(it.y)); it.dumped = dumped; }
+  colony.sources = c.sources;
+  colony.queenFood = c.queenFood;
+  colony.eatTimer = c.eatTimer;
+  colony.layTimer = c.layTimer;
+  colony.sourceTimer = 0;
+  resetEnemies();
+  sky.time = data.sky.time;
+  sky.day = data.sky.day;
+  return true;
+}
+
+// Alles von vorn: neue Welt, neue Königin, neue Arbeiterinnen
+function newColony() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* egal */ }
+  generateWorld();
+  resetColony();
+  generateSky();
+  sky.time = 0.4;
+  sky.day = 1;
+  spawnAnts();
+}

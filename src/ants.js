@@ -1,0 +1,461 @@
+'use strict';
+
+const WORKER_COUNT = 30;
+const ants = [];
+
+// ---------- Wegfindung (Breitensuche auf dem Raster) ----------
+// Ameisen laufen an Böden, Wänden und Decken entlang, nie frei durch die Luft.
+
+const bfsPrev = new Int32Array(N);
+const bfsMark = new Uint32Array(N);
+const bfsQueue = new Int32Array(N);
+let bfsStamp = 0;
+let bfsCount = 0;
+const DX = [1, -1, 0, 0, 1, 1, -1, -1];
+const DY = [0, 0, 1, -1, 1, -1, 1, -1];
+
+// Laufen geht überall, wo eine Wand höchstens 2 Pixel entfernt ist: So müssen die Ameisen nicht
+// jede kleine Nische umrunden, sondern gehen auch quer über Lücken und in der Gangmitte.
+function calcWalkable(x, y) {
+  if (world.cells[y * W + x] !== AIR || y < 1) return false;
+  for (let k = 0; k < 8; k++) if (solidAt(x + DX[k], y + DY[k])) return true;
+  if (y < world.surface[x] - 1) return false;   // draußen nur am Boden, nicht durch die Luft
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if ((dx === 2 || dx === -2 || dy === 2 || dy === -2) && solidAt(x + dx, y + dy)) return true;
+    }
+  }
+  return false;
+}
+
+// Laufkarte: Ob man auf einem Feld laufen kann, wird gemerkt und nur dort neu berechnet,
+// wo sich der Boden geändert hat (spart bei der Wegsuche sehr viel Rechenzeit).
+const walkMap = new Uint8Array(N);
+function refreshWalk() {
+  const r = world.walkRect;
+  world.walkRect = null;
+  const x0 = Math.max(0, r.x0 - 2), y0 = Math.max(0, r.y0 - 2), x1 = Math.min(W - 1, r.x1 + 2), y1 = Math.min(H - 1, r.y1 + 2);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) walkMap[y * W + x] = calcWalkable(x, y) ? 1 : 0;
+}
+function isWalkable(x, y) {
+  if (world.walkRect) refreshWalk();
+  return walkMap[y * W + x] === 1;
+}
+
+function bfs(start, isGoal, maxNodes) {
+  if (world.walkRect) refreshWalk();
+  bfsStamp++;
+  let head = 0, tail = 0;
+  bfsQueue[tail++] = start;
+  bfsMark[start] = bfsStamp;
+  bfsPrev[start] = -1;
+  while (head < tail) {
+    const i = bfsQueue[head++];
+    if (isGoal(i)) { bfsCount = tail; return i; }
+    if (tail >= maxNodes) continue;
+    const x = i % W, y = (i / W) | 0;
+    for (let k = 0; k < 8; k++) {
+      const nx = x + DX[k], ny = y + DY[k];
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      const j = ny * W + nx;
+      if (bfsMark[j] === bfsStamp || walkMap[j] !== 1) continue;
+      if (k >= 4 && solidAt(nx, y) && solidAt(x, ny)) continue;   // nicht durch Ecken quetschen
+      bfsMark[j] = bfsStamp;
+      bfsPrev[j] = i;
+      bfsQueue[tail++] = j;
+    }
+  }
+  bfsCount = tail;
+  return -1;
+}
+
+function buildPath(goal) {
+  const path = [];
+  for (let i = goal; bfsPrev[i] !== -1; i = bfsPrev[i]) path.push(i);
+  return path.reverse();
+}
+
+// ---------- Ameisen ----------
+
+function createAnt(x, y, caste, art = 'waldameise') {
+  return {
+    caste, art, x, y,
+    path: null, pi: 0, t: 0,
+    mx: 1, my: 0,           // letzte Bewegungsrichtung
+    rot: 0,                 // Drehung des Körpers (Füße zeigen zum Boden)
+    face: 1,                // 1 = schaut nach „vorne“ entlang des Bodens, -1 = andersherum
+    turn: 0,                // Restzeit der Umdreh-Bewegung
+    speed: caste === 'queen' ? 3 : caste === 'nurse' ? rand(5, 7) : rand(6, 9),
+    state: 'rest',
+    timer: rand(0, 2),
+    tip: null,
+    dropX: 0,
+    carry: false,           // trägt Sand
+    load: null,             // trägt Futter oder Brut
+    job: null,              // Aufgabe für die Kolonie (siehe colony.js)
+    walk: Math.random() * 8,
+    hp: ANT_HP[caste], maxHp: ANT_HP[caste],
+    foe: null, dead: false,
+  };
+}
+
+function spawnAnts() {
+  ants.length = 0;
+  const ex = world.entranceX;
+  for (let k = 0; k < WORKER_COUNT; k++) {
+    const x = ex + (Math.random() < 0.5 ? -1 : 1) * randInt(4, 26);
+    ants.push(createAnt(x, columnTop(x) - 1, 'worker', colony.art));
+  }
+  ants.push(createAnt(ex + 2, SURFACE_Y - 1, 'queen', colony.art));
+}
+
+function setPath(a, goal) {
+  if (goal < 0) return false;
+  a.path = buildPath(goal);
+  a.pi = 0;
+  a.t = 0;
+  return true;
+}
+
+
+// Wo gräbt die Ameise an einer Grabstelle? An der offenen Sandwand, die dem nächsten Stück am nächsten ist.
+function tipFront(tip) {
+  let d = null, floorY = Infinity;
+  if (tip.kind === 'room') { d = tip.blobs[0]; floorY = tip.floor; }
+  else d = tip.goal;
+  if (d) {
+    const f = nearestFace(d[0], d[1], d[2], floorY, d[0], d[1]);
+    if (f) return f;
+  }
+  return [tip.x + Math.cos(tip.dir) * 1.5, tip.y + Math.sin(tip.dir) * 1.5];
+}
+
+function decide(a) {
+  a.tip = null;
+  a.escortOf = null;
+  if (a.job) { dropLoad(a); endJob(a); }
+  if (a.caste === 'queen') { queenDecide(a); return; }
+  if (a.caste === 'soldier') { soldierDecide(a); return; }
+  // Feind im Nest in der Nähe? Arbeiterinnen helfen bei der Verteidigung.
+  if (a.caste === 'worker' && enemies.length && Math.random() < 0.5 && attackEnemy(a, 25)) return;
+  if (a.caste === 'nurse') {   // Pflegerin: bei der Brut bleiben, selten graben
+    if (colonyTask(a)) return;
+    if (Math.random() < 0.8) {
+      if (Math.random() < 0.5) { a.state = 'rest'; a.timer = rand(1, 4); return; }
+      wander(a, 150);
+      return;
+    }
+  }
+  // Erst schauen, ob die Kolonie etwas braucht (Futter, Brut, Königin), sonst graben
+  if (Math.random() < 0.9 && colonyTask(a)) return;
+  // Eine Grabstelle aussuchen, an der noch Platz ist
+  const open = world.tips.filter(t => t.ants < (t.kind === 'room' ? 8 : t.kind === 'queen' ? 6 : 4));
+  if (open.length && Math.random() < 0.85) {
+    // Der Schacht der Königin hat Vorrang, bis ihre Kammer fertig ist
+    // Angefangene Kammern werden bevorzugt fertig gegraben
+    const qt = open.find(t => t.kind === 'queen'), rooms = open.filter(t => t.kind === 'room');
+    const tip = qt && Math.random() < 0.7 ? qt
+      : rooms.length && Math.random() < 0.6 ? rooms[randInt(0, rooms.length - 1)]
+      : open[randInt(0, open.length - 1)];
+    const [fx, fy] = tipFront(tip);
+    const goal = bfs(idx(a.x, a.y), i => {
+      const x = i % W, y = (i / W) | 0;
+      return Math.hypot(x - fx, y - fy) < TUNNEL_R + 2.5;
+    }, N);
+    if (setPath(a, goal)) { a.tip = tip; tip.ants++; a.state = 'toDig'; return; }
+  }
+  if (Math.random() < 0.35) { a.state = 'rest'; a.timer = rand(0.5, 3); return; }
+  wander(a, 600);
+}
+
+const inRoyal = a => world.royal && Math.abs(a.x - world.royal.cx) < 12 && Math.abs(a.y - world.royal.floor) < 6;
+
+// Die Königin zieht in ihre Kammer, sobald es eine gibt, und bleibt dort
+function queenDecide(a) {
+  const r = world.royal;
+  if (r) {
+    if (!inRoyal(a)) {
+      // Umzug in eine neue Königskammer: erst warten, bis die Begleiterinnen da sind
+      if (colony.moveQueen) {
+        const esc = ants.filter(b => b.escortOf === a);
+        if (esc.length < 4) recruitEscorts(a, 4 - esc.length);
+        const ready = esc.filter(b => b.state === 'escort').length;
+        a.waitEscort = (a.waitEscort || 0) + 1;
+        if (ready < 3 && a.waitEscort < 15) { a.state = 'rest'; a.timer = 2; return; }
+        a.waitEscort = 0;
+      }
+      // möglichst nah an die Kammermitte, aber jede Stelle in der Kammer ist recht
+      const goal = bfs(idx(a.x, a.y), i => {
+        const x = i % W, y = (i / W) | 0;
+        return Math.abs(x - r.cx) < 6 && Math.abs(y - r.floor) <= 4;
+      }, N);
+      if (setPath(a, goal)) { a.state = 'toRoyal'; a.lost = false; return; }
+      a.lost = isUnderground(a.x, a.y);   // kein Weg hinein: dann eben hier im Nest bleiben
+    } else {
+      // Angekommen: Begleiterinnen gehen wieder an die Arbeit
+      if (colony.moveQueen) {
+        colony.moveQueen = false;
+        for (const b of ants) if (b.escortOf === a) { b.escortOf = null; b.state = 'rest'; b.timer = 0.5; }
+      }
+      // Die Königin liegt still in ihrer Kammer, wird gefüttert und legt Eier
+      a.state = 'rest';
+      a.timer = rand(8, 15);
+      return;
+    }
+  }
+  a.state = 'rest';
+  a.timer = rand(1, 3);
+}
+
+// Begleiterinnen für den Umzug der Königin: die nächsten freien Arbeiterinnen kommen zu ihr
+function recruitEscorts(q, n) {
+  const free = ants.filter(b => (b.caste === 'worker' || b.caste === 'nurse') && !b.job && !b.load && !b.carry &&
+    !b.escortOf && !b.foe && b.state !== 'digging' && b.state !== 'haul');
+  free.sort((p, r) => Math.hypot(p.x - q.x, p.y - q.y) - Math.hypot(r.x - q.x, r.y - q.y));
+  let k = ants.filter(b => b.escortOf === q).length;
+  for (const b of free.slice(0, n)) {
+    const goal = bfs(idx(b.x, b.y), i => { const x = i % W, y = (i / W) | 0; return Math.abs(x - q.x) <= 2 && Math.abs(y - q.y) <= 2; }, N);
+    if (!setPath(b, goal)) continue;
+    b.tip = null;
+    b.state = 'toEscort';
+    b.escortOf = q;
+    b.escortIdx = k++;
+  }
+}
+
+// Begleiterin: läuft vor und hinter der Königin her
+function escortStep(a, dt) {
+  const q = a.escortOf;
+  if (!q || q.dead || !colony.moveQueen) { a.escortOf = null; a.state = 'rest'; a.timer = 0.5; return; }
+  if (q.path && q.state === 'toRoyal') {
+    const j = q.pi + [3, -3, 6, -6][a.escortIdx % 4];
+    if (j >= 0) {
+      const c = q.path[Math.min(j, q.path.length - 1)], cx = c % W, cy = (c / W) | 0;
+      a.mx = cx - a.x; a.my = cy - a.y;
+      if (a.mx || a.my) a.walk += dt * q.speed * 1.6;
+      a.x = cx; a.y = cy;
+    }
+  } else { a.mx = q.x - a.x; a.my = q.y - a.y; }   // wartet bei der Königin
+}
+
+// Soldatin: bewacht den Eingang, läuft oben und im oberen Gang Streife
+function soldierDecide(a) {
+  const ex = world.entranceX;
+  if (enemies.length && attackEnemy(a, 200)) return;   // Alarm: zum Feind laufen
+  if (Math.random() < 0.6 && colonyTask(a)) return;   // schwere Beute mittragen
+  if (Math.random() < 0.5) {
+    const tx = ex + randInt(-25, 25), top = columnTop(tx);
+    const goal = bfs(idx(a.x, a.y), i => {
+      const x = i % W, y = (i / W) | 0;
+      return Math.abs(x - tx) <= 2 && y < top && y >= top - 2;
+    }, N);
+    if (setPath(a, goal)) { a.state = 'guard'; return; }
+  }
+  if (Math.random() < 0.5) { a.state = 'rest'; a.timer = rand(3, 8); return; }
+  wander(a, 300);
+}
+
+function wander(a, nodes) {
+  const start = idx(a.x, a.y);
+  // Wer oben herumläuft, geht gern zurück ins Nest
+  if (!isUnderground(a.x, a.y) && Math.random() < 0.6 && a.caste !== 'queen') {
+    const goal = bfs(start, i => {
+      const x = i % W, y = (i / W) | 0;
+      return y >= world.surface[x] + 10;
+    }, N);
+    if (setPath(a, goal)) { a.state = 'wander'; return; }
+  }
+  bfs(start, () => false, nodes);
+  if (bfsCount > 12) {
+    setPath(a, bfsQueue[randInt(Math.min(10, bfsCount - 1), bfsCount - 1)]);
+    a.state = 'wander';
+  } else {
+    a.state = 'rest';
+    a.timer = rand(0.5, 1.5);
+  }
+}
+
+// Sand nach oben tragen: zum nächsten Eingang, dicht daneben ablegen → Hügel, der mit dem Nest wächst
+function chooseDropColumn(a) {
+  let ex = world.entrances[0];
+  for (const e of world.entrances) if (Math.abs(e - a.x) < Math.abs(ex - a.x)) ex = e;
+  for (let k = 0; k < 6; k++) {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const x = Math.max(3, Math.min(W - 4, ex + side * (3 + Math.floor(Math.random() * Math.random() * 40))));
+    if (!isEntranceColumn(x)) return x;
+  }
+  return -1;
+}
+
+function startCarry(a) {
+  a.carry = true;
+  a.state = 'carry';
+  a.dropX = chooseDropColumn(a);
+  if (a.dropX < 0) a.dropX = world.entranceX + 12;
+  const top = columnTop(a.dropX);
+  const goal = bfs(idx(a.x, a.y), i => {
+    const x = i % W, y = (i / W) | 0;
+    return Math.abs(x - a.dropX) <= 1 && y < top;
+  }, N);
+  if (!setPath(a, goal)) { a.carry = false; decide(a); }
+}
+
+function arrive(a) {
+  a.path = null;
+  if (a.state === 'toEscort') { a.state = 'escort'; return; }
+  if (a.job) { jobArrive(a); return; }
+  switch (a.state) {
+    case 'toDig': {
+      const tip = a.tip;
+      if (tip && world.tips.includes(tip)) {
+        const [fx, fy] = tipFront(tip);
+        if (Math.hypot(a.x - fx, a.y - fy) < TUNNEL_R + 4) {
+          a.state = 'digging';
+          a.timer = rand(0.5, 0.9);
+          a.mx = fx - a.x; a.my = fy - a.y;
+          return;
+        }
+      }
+      decide(a);
+      break;
+    }
+    case 'carry':
+      a.state = 'dropping';
+      a.timer = 0.3;
+      break;
+    default:
+      decide(a);
+  }
+}
+
+function finishTimer(a) {
+  if (a.job && (a.state === 'pick' || a.state === 'give')) { jobTimer(a); return; }
+  switch (a.state) {
+    case 'digging': {
+      const tip = a.tip;
+      let n = 0;
+      // Ein Maul voll Sand abbeißen (nur an der offenen Wand, in Reichweite der Ameise)
+      if (tip && world.tips.includes(tip)) n = digStep(tip, a.x, a.y, 12);
+      a.tip = null;
+      a.sand = n;
+      if (n > 0) startCarry(a); else decide(a);
+      break;
+    }
+    case 'dropping':
+      placeGrain(a.dropX, Math.floor((a.sand || 4) / 8 + Math.random()));   // etwa ein Achtel des Ausgegrabenen bleibt als Hügel
+      a.carry = false;
+      decide(a);
+      break;
+    default:
+      decide(a);
+  }
+}
+
+function replan(a) {
+  a.path = null;
+  if (a.job) {
+    if (!routeJob(a)) decide(a);
+    return;
+  }
+  if (a.carry) startCarry(a); else decide(a);
+}
+
+// Körper zum Boden ausrichten: Füße zeigen zur festen Seite. Umdrehen, wenn sich die Laufrichtung umkehrt.
+// Richtung zum Boden nur neu berechnen, wenn die Ameise auf ein anderes Feld kommt (oder ab und zu,
+// falls neben ihr gegraben wurde)
+function orient(a, dt) {
+  if (a.ox !== a.x || a.oy !== a.y || --a.ot <= 0) {
+    a.ox = a.x; a.oy = a.y; a.ot = 10;
+    let sx = 0, sy = 0;
+    for (let k = 0; k < 8; k++) {
+      if (solidAt(a.x + DX[k], a.y + DY[k])) { const l = k < 4 ? 1 : Math.SQRT2; sx += DX[k] / l; sy += DY[k] / l; }
+    }
+    a.target = sx || sy ? Math.atan2(sy, sx) - Math.PI / 2 : null;
+  }
+  if (a.target !== null && a.rot !== a.target) {
+    const d = angleTo(a.rot, a.target);
+    if (Math.abs(d) < 0.002) a.rot = a.target;   // fertig gedreht
+    else a.rot += d * Math.min(1, dt * 10);
+    a.tx = Math.cos(a.rot); a.ty = Math.sin(a.rot);
+  }
+  if (a.tx === undefined) { a.tx = Math.cos(a.rot); a.ty = Math.sin(a.rot); }
+  const d = a.mx * a.tx + a.my * a.ty;
+  if (Math.abs(d) > 0.3) {
+    const f = d > 0 ? 1 : -1;
+    if (f !== a.face) { a.face = f; a.turn = 0.2; }
+  }
+  if (a.turn > 0) a.turn = Math.max(0, a.turn - dt);
+}
+
+function updateAnt(a, dt) {
+  // Verschüttet? Nach oben herauskrabbeln.
+  if (world.cells[idx(a.x, a.y)] !== AIR) {
+    while (a.y > 0 && world.cells[idx(a.x, a.y)] !== AIR) a.y--;
+    a.t = 0;
+    if (a.timer <= 0) replan(a);
+  }
+  // Nichts mehr unter den Füßen (Kammer um sie herum ausgegraben)? Dann fällt sie herunter.
+  if (!isWalkable(a.x, a.y) && a.y < H - 2 && world.cells[idx(a.x, a.y + 1)] === AIR) {
+    a.y++;
+    a.t = 0;
+    if (a.path) replan(a);
+    return;
+  }
+  orient(a, dt);
+  if (antCombat(a, dt)) return;
+  if (a.state === 'escort') { escortStep(a, dt); return; }
+  if (a.state === 'haul') return;   // trägt mit anderen eine Beute (Bewegung in colony.js)
+
+  if (a.timer > 0) {
+    a.timer -= dt;
+    if (a.state === 'digging' || a.state === 'pick') a.walk += dt * 10;
+    if (a.timer <= 0) finishTimer(a);
+    return;
+  }
+  if (!a.path) { arrive(a); return; }
+  const r = moveAlong(a, dt);
+  if (r === 'blocked') replan(a);
+  else if (r === 'arrived') arrive(a);
+}
+
+// Ein Stück den Weg entlanglaufen. Liefert 'blocked' (Weg verschüttet), 'arrived' oder 'moving'.
+function moveAlong(a, dt) {
+  let step = a.speed * dt;
+  while (step > 0 && a.pi < a.path.length) {
+    const next = a.path[a.pi];
+    if (world.cells[next] !== AIR) return 'blocked';
+    a.mx = next % W - a.x;
+    a.my = ((next / W) | 0) - a.y;
+    const need = 1 - a.t;
+    if (step >= need) {
+      a.x = next % W;
+      a.y = (next / W) | 0;
+      a.t = 0;
+      a.pi++;
+      step -= need;
+      a.walk += need * 1.6;
+    } else {
+      a.t += step;
+      a.walk += step * 1.6;
+      step = 0;
+    }
+  }
+  return a.pi >= a.path.length ? 'arrived' : 'moving';
+}
+
+function updateAnts(dt) {
+  // Einmal pro Schritt zählen statt bei jeder Entscheidung: Königin und Ameisen je Grabstelle
+  colony.queen = null;
+  for (const t of world.tips) t.ants = 0;
+  for (const a of ants) {
+    if (a.caste === 'queen') colony.queen = a;
+    if (a.tip) a.tip.ants++;
+  }
+  for (const a of ants) if (!a.dead) updateAnt(a, dt);
+  // Gestorbene Ameisen aus der Liste nehmen
+  if (ants.some(a => a.dead)) {
+    let k = 0;
+    for (const a of ants) if (!a.dead) ants[k++] = a;
+    ants.length = k;
+  }
+}

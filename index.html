@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ameisen-Sim</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #140d08; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+    /* Knopf im Stil der Info-Karte */
+    #knoepfe { position: fixed; top: 24px; right: 24px; display: flex; gap: 16px; }
+    #knoepfe button { padding: 10px 18px; border-radius: 10px;
+      border: 2px solid rgba(120, 100, 80, 0.35); background: rgba(240, 233, 220, 0.94);
+      color: #3e3128; font: 700 15px system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer; }
+    #knoepfe button:hover, #tempo button:hover { background: rgba(250, 244, 232, 0.98); }
+    /* Zeitsteuerung */
+    #tempo { position: fixed; top: 76px; right: 24px; display: flex; gap: 6px; }
+    #tempo button { padding: 6px 10px; border-radius: 8px; border: 2px solid rgba(120, 100, 80, 0.35);
+      background: rgba(240, 233, 220, 0.94); color: #3e3128; font: 700 14px system-ui, sans-serif; cursor: pointer; }
+    #warpBox { display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 8px;
+      border: 2px solid rgba(120, 100, 80, 0.35); background: rgba(240, 233, 220, 0.94); color: #3e3128; font: 700 14px system-ui, sans-serif; }
+    #warpBox input { width: 120px; accent-color: #b5704a; }
+    #warpBox b { min-width: 42px; text-align: right; }
+    #tempo button.an { background: #b5704a; color: #fff6ea; border-color: #8a5236; }
+  </style>
+</head>
+<body>
+  <canvas id="screen"></canvas>
+  <div id="knoepfe">
+    <button id="bilder" title="Eigene Bilder prüfen">BILDER</button>
+    <button id="editor" title="Nest selbst malen">BAU-EDITOR</button>
+    <button id="neu" title="Taste N">NEUE KOLONIE</button>
+  </div>
+  <div id="tempo">
+    <button data-s="0" title="Leertaste">❚❚</button>
+    <button data-s="1" title="Taste 1">1×</button>
+    <button data-s="2" title="Taste 2">2×</button>
+    <button data-s="4" title="Taste 3">4×</button>
+    <button data-s="8" title="Taste 4">8×</button>
+    <button data-s="16" title="Taste 5">16×</button>
+    <span id="warpBox"><input id="warp" type="range" min="1" max="100" value="1" title="Zeitraffer bis 100×"><b id="warpText">1×</b></span>
+  </div>
+  <script src="src/world.js"></script>
+  <script src="src/arten.js"></script>
+  <script src="src/pflanzen.js"></script>
+  <script src="bilder/liste.js"></script>
+  <script src="src/colony.js"></script>
+  <script src="src/ants.js"></script>
+  <script src="src/enemies.js"></script>
+  <script src="src/sky.js"></script>
+  <script src="src/sprites.js"></script>
+  <script src="src/bilder.js"></script>
+  <script src="src/render.js"></script>
+  <script src="src/save.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
